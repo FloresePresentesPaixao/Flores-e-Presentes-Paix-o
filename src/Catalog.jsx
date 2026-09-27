@@ -8,6 +8,9 @@ import * as api from "./api";
 
 const ARQUIVOS = "https://qojpijbimbwdxuwjvypf.supabase.co/storage/v1/object/public/paixao/";
 const LOGO = ARQUIVOS + "logo.jpg";
+/* Fotos da abertura: ABERTURA01 a ABERTURA07 no bucket.
+   Tenta .jpg e, se não existir, .jpeg — sem precisar renomear nada.   */
+const ABERTURAS = [1, 2, 3, 4, 5, 6, 7].map((n) => `${ARQUIVOS}ABERTURA0${n}`);
 
 const C = {
   creme: "#FDF7F4", creme2: "#F7EDE8", branco: "#FFFFFF",
@@ -160,7 +163,30 @@ function Vitrine() {
 }
 
 /* -------------------------------- Abertura -------------------------------- */
+function FotoFundo({ base, visivel }) {
+  const [ext, setExt] = useState(".jpg");
+  const [sumiu, setSumiu] = useState(false);
+  if (sumiu) return null;
+  return (
+    <img
+      src={base + ext}
+      alt=""
+      onError={() => (ext === ".jpg" ? setExt(".jpeg") : setSumiu(true))}
+      style={{
+        position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%",
+        objectFit: "cover", opacity: visivel ? 0.32 : 0, transition: "opacity 1.4s ease",
+      }}
+    />
+  );
+}
+
 function Abertura({ loja, onEntrar }) {
+  const [foto, setFoto] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setFoto((f) => (f + 1) % ABERTURAS.length), 2600);
+    return () => clearInterval(t);
+  }, []);
+
   const petalas = useMemo(() => Array.from({ length: 14 }, (_, i) => ({
     left: Math.random() * 100, atraso: Math.random() * 9, tempo: 9 + Math.random() * 7,
     tam: 8 + Math.random() * 12, op: 0.18 + Math.random() * 0.3, i,
@@ -169,6 +195,8 @@ function Abertura({ loja, onEntrar }) {
   return (
     <div style={{ fontFamily: FONT, minHeight: "100vh", background: `linear-gradient(165deg, ${C.vinhoEsc} 0%, ${C.vinho} 55%, #A82A3E 100%)`, display: "grid", placeItems: "center", position: "relative", overflow: "hidden", padding: 24 }}>
       <style>{CSS}</style>
+      {ABERTURAS.map((b, k) => <FotoFundo key={b} base={b} visivel={k === foto} />)}
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, background: `linear-gradient(180deg, rgba(94,16,31,.55), rgba(94,16,31,.88))` }} />
       {petalas.map((p) => (
         <span key={p.i} style={{
           position: "absolute", top: "-10%", left: `${p.left}%`, width: p.tam, height: p.tam * 1.25,
