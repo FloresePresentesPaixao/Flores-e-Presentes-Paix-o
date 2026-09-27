@@ -110,6 +110,9 @@ input,select,textarea,button{font-family:inherit}
 .px-in{transition:border-color .16s ease,box-shadow .16s ease}
 .px-in:focus{outline:none;border-color:${T.vinho};box-shadow:0 0 0 3px rgba(142,27,46,.12)}
 .px-linha:hover{background:${T.bg2}}
+.px-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.px-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:560px){.px-2col{grid-template-columns:1fr}.px-3col{grid-template-columns:1fr 1fr}}
 `;
 
 /* -------------------------------- UI base --------------------------------- */
@@ -213,9 +216,9 @@ function Modal({ aberto, aoFechar, titulo, sub, children, largo, rodape }) {
   if (!aberto) return null;
   return (
     <div className="px-fade" onClick={aoFechar}
-      style={{ position: "fixed", inset: 0, background: "rgba(58,42,46,.45)", zIndex: 90, display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+      style={{ position: "fixed", top: 0, right: 0, bottom: 0, left: 0, height: "100dvh", background: "rgba(58,42,46,.45)", zIndex: 90, display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
       <div onClick={(e) => e.stopPropagation()} className="px-scroll"
-        style={{ background: "#fff", width: "100%", maxWidth: largo ? 760 : 520, maxHeight: "92vh", overflowY: "auto", borderRadius: "22px 22px 0 0", boxShadow: SOMBRA_ALTA, animation: "pxSheet .26s cubic-bezier(.16,1,.3,1) both" }}>
+        style={{ background: "#fff", width: "100%", maxWidth: largo ? 760 : 520, maxHeight: "92dvh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", borderRadius: "22px 22px 0 0", boxShadow: SOMBRA_ALTA, animation: "pxSheet .26s cubic-bezier(.16,1,.3,1) both" }}>
         <div style={{ position: "sticky", top: 0, background: "#fff", zIndex: 2, padding: "18px 20px 14px", borderBottom: `1px solid ${T.line}`, borderRadius: "22px 22px 0 0" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
             <div>
@@ -827,7 +830,7 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
           {meta.customers.map((c) => <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>)}
         </Selecao>
       </Campo>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Nome" obrigatorio><Entrada value={f.buyerName} onChange={(e) => set("buyerName", e.target.value)} placeholder="Quem está pagando" /></Campo>
         <Campo label="WhatsApp"><Entrada value={f.buyerPhone} onChange={(e) => set("buyerPhone", e.target.value)} placeholder="(34) 90000-0000" /></Campo>
       </div>
@@ -894,7 +897,7 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
         })}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Nome de quem recebe"><Entrada value={f.recipientName} onChange={(e) => set("recipientName", e.target.value)} placeholder="Deixe vazio se for o próprio cliente" /></Campo>
         <Campo label="Telefone de quem recebe"><Entrada value={f.recipientPhone} onChange={(e) => set("recipientPhone", e.target.value)} /></Campo>
       </div>
@@ -911,14 +914,14 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
             <Campo label="Rua"><Entrada value={f.street} onChange={(e) => set("street", e.target.value)} /></Campo>
             <Campo label="Número"><Entrada value={f.numberAddr} onChange={(e) => set("numberAddr", e.target.value)} /></Campo>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="px-2col">
             <Campo label="Complemento"><Entrada value={f.complement} onChange={(e) => set("complement", e.target.value)} placeholder="Apto, bloco, casa" /></Campo>
             <Campo label="Ponto de referência"><Entrada value={f.reference} onChange={(e) => set("reference", e.target.value)} placeholder="Perto da padaria…" /></Campo>
           </div>
         </>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Data"><Entrada type="date" value={f.deliveryDate || ""} onChange={(e) => set("deliveryDate", e.target.value)} /></Campo>
         <Campo label="Horário">
           <Selecao value={f.deliveryWindow} onChange={(e) => set("deliveryWindow", e.target.value)}>
@@ -935,7 +938,7 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
       <Campo label="Mensagem" dica={meta.settings.cardNote}>
         <Area value={f.cardMessage} onChange={(e) => set("cardMessage", e.target.value)} placeholder="Ex.: Parabéns! Que seu dia seja tão lindo quanto você." />
       </Campo>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Para"><Entrada value={f.cardTo} onChange={(e) => set("cardTo", e.target.value)} placeholder="Nome de quem recebe" /></Campo>
         <Campo label="De"><Entrada value={f.cardFrom} onChange={(e) => set("cardFrom", e.target.value)} placeholder="Nome de quem envia" /></Campo>
       </div>
@@ -954,7 +957,7 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
         <Linha rotulo="Total" valor={brl(total)} forte />
       </Cartao>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Forma de pagamento">
           <Selecao value={f.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)}>
             <option value="">— escolha —</option>
@@ -1305,7 +1308,7 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
 
       <Campo label="Nome" obrigatorio><Entrada value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Ex.: Buquê de 12 rosas vermelhas" /></Campo>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="Categoria" obrigatorio>
           <Selecao value={f.categoryId} onChange={(e) => set("categoryId", e.target.value)}>
             <option value="">— escolha —</option>
@@ -1324,7 +1327,7 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
 
       {!f.onRequest && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="px-2col">
             <Campo label="Preço"><Entrada type="number" step="0.01" value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="0,00" /></Campo>
             <Campo label="Mostrar como" dica="No catálogo">
               <Selecao value={f.priceFrom ? "1" : "0"} onChange={(e) => set("priceFrom", e.target.value === "1")}>
@@ -1521,7 +1524,7 @@ function FormCliente({ inicial, aoFechar, aoSalvar, avisar }) {
         <Botao onClick={salvar} disabled={indo} icone="check" style={{ flex: 2 }}>{indo ? "Salvando…" : "Salvar"}</Botao>
       </>}>
       <Campo label="Nome" obrigatorio><Entrada value={f.name} onChange={(e) => set("name", e.target.value)} /></Campo>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div className="px-2col">
         <Campo label="WhatsApp"><Entrada value={f.phone || ""} onChange={(e) => set("phone", e.target.value)} placeholder="(34) 90000-0000" /></Campo>
         <Campo label="Aniversário" dica="Para lembrar de oferecer"><Entrada type="date" value={f.birthday || ""} onChange={(e) => set("birthday", e.target.value)} /></Campo>
       </div>
@@ -1773,13 +1776,13 @@ function Ajustes({ ctx }) {
           <Cartao style={{ padding: 18, marginBottom: 16 }}>
             <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 14 }}>A loja</div>
             <Campo label="Nome"><Entrada value={cfg.storeName} onChange={(e) => setCfg({ ...cfg, storeName: e.target.value })} disabled={!admin} /></Campo>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="px-2col">
               <Campo label="WhatsApp" dica="Com 55 e DDD"><Entrada value={cfg.whatsapp} onChange={(e) => setCfg({ ...cfg, whatsapp: e.target.value })} disabled={!admin} /></Campo>
               <Campo label="Instagram"><Entrada value={cfg.instagram} onChange={(e) => setCfg({ ...cfg, instagram: e.target.value })} disabled={!admin} /></Campo>
             </div>
             <Campo label="Endereço"><Entrada value={cfg.address} onChange={(e) => setCfg({ ...cfg, address: e.target.value })} disabled={!admin} /></Campo>
             <Campo label="Horário de funcionamento"><Entrada value={cfg.hours} onChange={(e) => setCfg({ ...cfg, hours: e.target.value })} disabled={!admin} /></Campo>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="px-2col">
               <Campo label="Chave Pix"><Entrada value={cfg.pixKey} onChange={(e) => setCfg({ ...cfg, pixKey: e.target.value })} disabled={!admin} /></Campo>
               <Campo label="Nome no Pix"><Entrada value={cfg.pixName} onChange={(e) => setCfg({ ...cfg, pixName: e.target.value })} disabled={!admin} /></Campo>
             </div>
