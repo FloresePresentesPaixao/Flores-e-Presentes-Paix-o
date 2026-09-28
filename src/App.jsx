@@ -258,11 +258,11 @@ function Aviso({ msg }) {
 
 function Marca({ s = 36 }) {
   const [falhou, setFalhou] = useState(false);
-  const base = { width: s, height: s, borderRadius: "50%", flexShrink: 0, objectFit: "cover", border: `1px solid ${T.line}` };
+  const base = { width: s, height: s, borderRadius: "50%", flexShrink: 0, objectFit: "cover", background: "#F5EEE3", border: `1px solid ${T.line}` };
   if (falhou) {
     return <div style={{ ...base, background: T.vinho, border: "none", display: "grid", placeItems: "center", color: "#fff", fontFamily: SERIF, fontWeight: 700, fontSize: s * 0.42 }}>P</div>;
   }
-  return <img src={ARQUIVOS + "icone.jpg"} alt="Paixão" onError={() => setFalhou(true)} style={base} />;
+  return <img src={ARQUIVOS + "logo-circulo.jpg"} alt="Paixão" onError={() => setFalhou(true)} style={base} />;
 }
 
 /* ============================== Aplicativo ================================ */
