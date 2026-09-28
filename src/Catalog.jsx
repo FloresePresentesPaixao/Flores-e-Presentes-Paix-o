@@ -7,7 +7,7 @@ import * as api from "./api";
    =========================================================================== */
 
 const ARQUIVOS = "https://qojpijbimbwdxuwjvypf.supabase.co/storage/v1/object/public/paixao/";
-const LOGO = ARQUIVOS + "logo-redonda.png";   /* selo já recortado, sem fundo */
+const LOGO = ARQUIVOS + "logo-circulo.jpg";   /* selo centralizado sobre o creme da marca */
 /* Fotos da abertura: ABERTURA01 a ABERTURA07 no bucket.
    Tenta .jpg e, se não existir, .jpeg — sem precisar renomear nada.   */
 const ABERTURAS = [1, 2, 3, 4, 5, 6, 7].map((n) => `${ARQUIVOS}ABERTURA0${n}`);
@@ -225,9 +225,9 @@ function Abertura({ loja, onEntrar }) {
 
       <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 520 }}>
         <div style={{ display: "inline-block", marginBottom: 26, animation: "flSelo 1s cubic-bezier(.16,1,.3,1) both" }}>
-          <div style={{ width: 158, height: 158, borderRadius: "50%", display: "grid", placeItems: "center", boxShadow: "0 0 0 1px rgba(255,255,255,.18), 0 20px 54px rgba(0,0,0,.34)" }}>
+          <div style={{ width: 158, height: 158, borderRadius: "50%", overflow: "hidden", background: "#F5EEE3", boxShadow: "0 20px 54px rgba(0,0,0,.34)" }}>
             <img src={LOGO} alt="Flores e Presentes Paixão" onError={(e) => { e.currentTarget.style.display = "none"; }}
-              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
         </div>
 
@@ -259,7 +259,7 @@ function Topo({ loja, onSacola, n }) {
   return (
     <header style={{ background: "rgba(253,247,244,.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.linha}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 11, position: "sticky", top: 0, zIndex: 40 }}>
       <img src={LOGO} alt="" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-        style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "contain", background: "#fff" }} />
+        style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", background: "#F5EEE3" }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 600, lineHeight: 1.1 }}>Paixão</div>
         <div style={{ fontSize: 11, color: C.ink3 }}>Flores e Presentes</div>
