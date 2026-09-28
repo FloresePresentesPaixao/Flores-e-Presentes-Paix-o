@@ -31,6 +31,12 @@ const dia = (d) => (d ? new Date(typeof d === "string" && d.length === 10 ? d + 
 const diaHora = (d) => (d ? new Date(d).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—");
 const diaSemana = (d) => (d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long" }) : "");
 const JANELAS = ["Manhã (8h às 12h)", "Tarde (12h às 18h)", "Horário combinado"];
+
+/* Promoção vale só para produto de preço único: sem tamanhos e sem "sob consulta".
+   O preço de tabela nunca é apagado — tirar da promoção devolve o valor original. */
+const temPromo = (p) => !p.onRequest && !p.sizes.length && p.promoPrice != null && p.promoPrice > 0 && p.promoPrice < p.price;
+const precoAtual = (p) => (temPromo(p) ? p.promoPrice : p.sizes.length ? p.sizes[0].price : p.price);
+const podePromo = (p) => !p.onRequest && !p.sizes.length && Number(p.price) > 0;
 const PAGAMENTOS = ["Pix", "Dinheiro", "Cartão de débito", "Cartão de crédito", "A combinar"];
 
 /* --------------------------------- Ícones --------------------------------- */
@@ -58,6 +64,7 @@ const ICONES = {
   cartao: "M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1M7 10h10M7 14h6",
   whats: "M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20.5l1.8-5.2A8.5 8.5 0 1 1 21 11.5",
   local: "M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
+  promocoes: "M19 5 5 19M7 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M17 19.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
   presente: "M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M3 8h18v4H3zM12 8v13M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5",
 };
 function Icone({ n, s = 18, cor = "currentColor", w = 1.75, style }) {
@@ -74,6 +81,7 @@ const NAV = [
   { id: "pedidos", label: "Pedidos" },
   { id: "produtos", label: "Produtos" },
   { id: "clientes", label: "Clientes" },
+  { id: "promocoes", label: "Promoções" },
   { id: "relatorios", label: "Relatórios" },
   { id: "ajustes", label: "Ajustes" },
 ];
@@ -289,7 +297,7 @@ export default function App() {
   const [tab, setTab] = useState("inicio");
   const [meta, setMeta] = useState({
     categories: [], occasions: [], zones: [], statuses: [], customers: [], users: [],
-    settings: { storeName: "Flores e Presentes Paixão", whatsapp: "", instagram: "", address: "", hours: "", pixKey: "", pixName: "", paymentNote: "", cardNote: "" },
+    settings: { storeName: "Flores e Presentes Paixão", whatsapp: "", instagram: "", address: "", hours: "", pixKey: "", pixName: "", pixType: "CNPJ", paymentNote: "", cardNote: "" },
   });
   const [produtos, setProdutos] = useState([]);
   const [pedidos, setPedidos] = useState([]);
@@ -380,7 +388,8 @@ export default function App() {
 
   const telas = {
     inicio: <Hoje ctx={ctx} />, pedidos: <Pedidos ctx={ctx} />, produtos: <Produtos ctx={ctx} />,
-    clientes: <Clientes ctx={ctx} />, relatorios: <Relatorios ctx={ctx} />, ajustes: <Ajustes ctx={ctx} />,
+    clientes: <Clientes ctx={ctx} />, promocoes: <Promocoes ctx={ctx} />,
+    relatorios: <Relatorios ctx={ctx} />, ajustes: <Ajustes ctx={ctx} />,
   };
 
   return (
@@ -557,7 +566,9 @@ function Hoje({ ctx }) {
     <div>
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 13.5, color: T.ink2, textTransform: "capitalize" }}>{diaSemana(hoje)}, {dia(hoje)}</div>
-        <h1 style={{ fontFamily: SERIF, fontSize: 27, fontWeight: 600, margin: "3px 0 0" }}>Olá, {user.name}</h1>
+        <h1 style={{ fontFamily: SERIF, fontSize: 27, fontWeight: 600, margin: "3px 0 0", lineHeight: 1.15 }}>
+          Seja bem-vinda, {meta.settings.storeName || "Flores e Presentes Paixão"}
+        </h1>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
@@ -783,12 +794,14 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
   const addItem = (produtoId) => {
     const p = produtos.find((x) => x.id === produtoId);
     if (!p) return;
-    const preco = p.sizes.length ? p.sizes[0].price : p.price;
+    /* promoção ativa manda no preço; "sob consulta" entra com o valor de
+       referência, quando houver, para ela só ajustar.                        */
+    const preco = p.onRequest ? (Number(p.price) || 0) : precoAtual(p);
     setF((x) => ({
       ...x,
       items: [...x.items, {
         productId: p.id, description: p.name, sizeName: p.sizes.length ? p.sizes[0].name : "",
-        quantity: 1, unitPrice: p.onRequest ? 0 : preco, total: p.onRequest ? 0 : preco,
+        quantity: 1, unitPrice: preco, total: preco,
       }],
     }));
   };
@@ -896,7 +909,9 @@ function FormPedido({ ctx, inicial, aoFechar, aoSalvar }) {
         <Selecao value="" onChange={(e) => { addItem(e.target.value); e.target.value = ""; }}>
           <option value="">— escolha —</option>
           {produtos.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} — {p.onRequest ? "consultar" : brl(p.sizes.length ? p.sizes[0].price : p.price)}</option>
+            <option key={p.id} value={p.id}>
+              {p.name} — {p.onRequest ? (Number(p.price) > 0 ? `consultar (a partir de ${brl(p.price)})` : "consultar") : brl(precoAtual(p))}{temPromo(p) ? " • promoção" : ""}
+            </option>
           ))}
         </Selecao>
       </Campo>
@@ -1235,16 +1250,23 @@ function Produtos({ ctx }) {
               </div>
               <div style={{ display: "flex", gap: 5, marginTop: 5, flexWrap: "wrap" }}>
                 {!p.active && <Selo cor={T.ink3}>Fora do catálogo</Selo>}
+                {temPromo(p) && <Selo cor={T.rosa} fundo={T.rosaSoft}>Em promoção</Selo>}
                 {p.sizes.length > 0 && <Selo cor={T.vinho} fundo={T.vinhoSoft}>{p.sizes.length} tamanhos</Selo>}
                 {p.trackStock && <Selo cor={p.stock > 0 ? T.ok : T.err} fundo={p.stock > 0 ? T.okSoft : T.errSoft}>{p.stock} em estoque</Selo>}
               </div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
-              {p.onRequest ? <Selo cor={T.rosa} fundo={T.rosaSoft}>Consultar</Selo> : (
+              {p.onRequest ? (
+                <>
+                  <Selo cor={T.rosa} fundo={T.rosaSoft}>Consultar</Selo>
+                  {Number(p.price) > 0 && <div style={{ fontSize: 11, color: T.ink3, marginTop: 4 }}>a partir de {brl(p.price)}</div>}
+                </>
+              ) : (
                 <>
                   {p.priceFrom && <div style={{ fontSize: 11, color: T.ink3 }}>a partir de</div>}
-                  <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>
-                    {brl(p.sizes.length ? p.sizes[0].price : p.price)}
+                  {temPromo(p) && <div style={{ fontSize: 12, color: T.ink3, textDecoration: "line-through" }}>{brl(p.price)}</div>}
+                  <div style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, color: temPromo(p) ? T.rosa : T.ink }}>
+                    {brl(precoAtual(p))}
                   </div>
                 </>
               )}
@@ -1266,6 +1288,7 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
   const [f, setF] = useState(() => inicial ? { ...inicial, sizes: inicial.sizes.map((s) => ({ ...s })), occasionIds: [...inicial.occasionIds] } : {
     name: "", sku: "", categoryId: "", description: "", price: "", onRequest: false, priceFrom: false,
     madeToOrder: true, leadHours: "", trackStock: false, stock: 0, active: true,
+    promoPrice: null, showQuote: true,
     mainImage: null, gallery: [], sizes: [], occasionIds: [],
   });
   const [salvando, setSalvando] = useState(false);
@@ -1308,7 +1331,8 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
     setSalvando(true);
     try {
       if (f.sku && await api.skuExists(f.sku.trim(), f.id)) { setSalvando(false); return avisar("Já existe produto com esse código.", "erro"); }
-      await api.saveProduct({ ...f, name: f.name.trim(), sku: f.sku.trim() });
+      const promo = f.sizes.length > 0 ? null : f.promoPrice;
+      await api.saveProduct({ ...f, name: f.name.trim(), sku: f.sku.trim(), promoPrice: promo });
       aoSalvar();
     } catch (e) { avisar(e.message, "erro"); }
     finally { setSalvando(false); }
@@ -1340,7 +1364,13 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
       <Campo label="Descrição"><Area value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="O que vai no arranjo, tipo de embalagem, detalhes…" /></Campo>
 
       <SimNao label="Preço sob consulta" valor={f.onRequest} aoMudar={(v) => set("onRequest", v)}
-        dica="Para arranjos que variam conforme as flores do dia." cor={T.rosa} fundo={T.rosaSoft} />
+        dica="Para cestas montadas e arranjos que variam conforme o pedido." cor={T.rosa} fundo={T.rosaSoft} />
+
+      {f.onRequest && (
+        <Campo label="Valor de referência" dica='Opcional. Se preencher, o catálogo mostra "Sob consulta — a partir de R$ ...".'>
+          <Entrada type="number" step="0.01" value={f.price} onChange={(e) => set("price", e.target.value)} placeholder="Deixe vazio para só 'Sob consulta'" />
+        </Campo>
+      )}
 
       {!f.onRequest && (
         <>
@@ -1353,6 +1383,27 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
               </Selecao>
             </Campo>
           </div>
+
+          <Campo label="Promoção" dica="O preço acima fica guardado. Para encerrar, é só apagar este valor.">
+            {f.sizes.length > 0 ? (
+              <div style={{ background: T.bg2, borderRadius: 12, padding: "12px 13px", fontSize: 13, color: T.ink2 }}>
+                Produto com tamanhos não entra em promoção. Ajuste o preço do tamanho.
+              </div>
+            ) : (
+              <>
+                <Entrada type="number" step="0.01" value={f.promoPrice == null ? "" : f.promoPrice}
+                  onChange={(e) => set("promoPrice", e.target.value === "" ? null : e.target.value)}
+                  placeholder="Sem promoção" />
+                {f.promoPrice != null && f.promoPrice !== "" && (
+                  <div style={{ fontSize: 12.5, marginTop: 6, color: Number(f.promoPrice) > 0 && Number(f.promoPrice) < Number(f.price) ? T.ok : T.warn }}>
+                    {Number(f.promoPrice) > 0 && Number(f.promoPrice) < Number(f.price)
+                      ? `De ${brl(f.price)} por ${brl(f.promoPrice)} — ${Math.round((1 - Number(f.promoPrice) / Number(f.price)) * 100)}% de desconto.`
+                      : "A promoção só aparece se o valor for menor que o preço cadastrado."}
+                  </div>
+                )}
+              </>
+            )}
+          </Campo>
 
           <Campo label="Tamanhos" dica="Pequeno, médio e grande com preços diferentes. Deixe vazio se houver um preço só.">
             <Cartao style={{ padding: 6, boxShadow: "none" }}>
@@ -1376,6 +1427,9 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
           </Campo>
         </>
       )}
+
+      <SimNao label='Botão "Consultar valores"' valor={f.showQuote !== false} aoMudar={(v) => set("showQuote", v)}
+        dica="No catálogo, abre o WhatsApp já perguntando o valor deste produto." cor={T.rosa} fundo={T.rosaSoft} />
 
       <Campo label="Ocasiões" dica="Onde esse produto aparece no catálogo.">
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
@@ -1459,6 +1513,115 @@ function SimNao({ label, dica, valor, aoMudar, cor = T.vinho, fundo = T.vinhoSof
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------- Promoções -------------------------------- */
+function Promocoes({ ctx }) {
+  const { produtos, largo, recarregar, avisar } = ctx;
+  const [alvo, setAlvo] = useState("");
+  const [valor, setValor] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  /* tudo que tem valor de promoção guardado, mesmo se estiver mal preenchido */
+  const ativas = useMemo(() => produtos.filter((p) => p.promoPrice != null && p.promoPrice > 0), [produtos]);
+  const disponiveis = useMemo(() => produtos.filter((p) => podePromo(p) && !(p.promoPrice > 0)), [produtos]);
+  const escolhido = produtos.find((p) => p.id === alvo);
+
+  const aplicar = async () => {
+    if (!escolhido) return avisar("Escolha o produto.", "erro");
+    const v = Number(valor);
+    if (!v || v <= 0) return avisar("Informe o valor da promoção.", "erro");
+    if (v >= Number(escolhido.price)) return avisar(`O valor precisa ser menor que ${brl(escolhido.price)}.`, "erro");
+    setSalvando(true);
+    try {
+      await api.setPromo(escolhido.id, v);
+      setAlvo(""); setValor("");
+      await recarregar();
+      avisar("Produto em promoção.");
+    } catch (e) { avisar(e.message, "erro"); }
+    finally { setSalvando(false); }
+  };
+
+  const tirar = async (p) => {
+    if (!window.confirm(`Tirar "${p.name}" da promoção?\n\nO preço volta para ${brl(p.price)}.`)) return;
+    try { await api.clearPromo(p.id); await recarregar(); avisar("Promoção encerrada."); }
+    catch (e) { avisar(e.message, "erro"); }
+  };
+
+  return (
+    <div>
+      <Titulo sub={ativas.length ? `${ativas.length} produto(s) em promoção` : "Nenhuma promoção no ar"}>Promoções</Titulo>
+
+      <Cartao style={{ padding: 18, marginBottom: 18 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 4 }}>Colocar um produto em promoção</div>
+        <div style={{ fontSize: 12.5, color: T.ink2, marginBottom: 14 }}>
+          O preço cadastrado fica guardado. Ao remover, ele volta sozinho.
+        </div>
+        <Campo label="Produto">
+          <Selecao value={alvo} onChange={(e) => { setAlvo(e.target.value); setValor(""); }}>
+            <option value="">— escolha —</option>
+            {disponiveis.map((p) => <option key={p.id} value={p.id}>{p.name} — {brl(p.price)}</option>)}
+          </Selecao>
+        </Campo>
+        {escolhido && (
+          <>
+            <Campo label="Preço na promoção" dica={`Preço normal: ${brl(escolhido.price)}`}>
+              <Entrada type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
+            </Campo>
+            {Number(valor) > 0 && Number(valor) < Number(escolhido.price) && (
+              <div style={{ fontSize: 13, color: T.ok, marginTop: -6, marginBottom: 12 }}>
+                {Math.round((1 - Number(valor) / Number(escolhido.price)) * 100)}% de desconto.
+              </div>
+            )}
+          </>
+        )}
+        <Botao icone="check" disabled={salvando || !escolhido} onClick={aplicar} style={{ width: "100%" }}>
+          {salvando ? "Salvando…" : "Colocar em promoção"}
+        </Botao>
+        {disponiveis.length === 0 && !escolhido && (
+          <div style={{ fontSize: 12.5, color: T.ink3, marginTop: 10 }}>
+            Só entram aqui produtos com preço único: sem tamanhos e sem "sob consulta".
+          </div>
+        )}
+      </Cartao>
+
+      <Titulo sub="Toque para alterar o valor ou encerrar">No ar agora</Titulo>
+      {ativas.length === 0 && <Cartao><Vazio icone="promocoes">Nenhum produto em promoção.</Vazio></Cartao>}
+
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 10 }}>
+        {ativas.map((p) => {
+          const valida = temPromo(p);
+          return (
+            <Cartao key={p.id} style={{ padding: 13, display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 13, background: T.bg2, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center" }}>
+                {p.photos[0] ? <img src={p.photos[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <Icone n="produtos" s={20} cor={T.rosa} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 600 }}>{p.name}</div>
+                <div style={{ fontSize: 13, color: T.ink2, marginTop: 3 }}>
+                  <span style={{ textDecoration: "line-through", color: T.ink3 }}>{brl(p.price)}</span>
+                  {" por "}
+                  <strong style={{ color: T.rosa }}>{brl(p.promoPrice)}</strong>
+                </div>
+                {!valida && (
+                  <div style={{ fontSize: 12, color: T.warn, marginTop: 3 }}>
+                    Não aparece no catálogo: o valor não é menor que o preço.
+                  </div>
+                )}
+                {valida && (
+                  <div style={{ fontSize: 12, color: T.ok, marginTop: 3 }}>
+                    {Math.round((1 - Number(p.promoPrice) / Number(p.price)) * 100)}% de desconto
+                  </div>
+                )}
+              </div>
+              <Botao tipo="perigo" tamanho="s" icone="lixo" onClick={() => tirar(p)}>Tirar</Botao>
+            </Cartao>
+          );
+        })}
       </div>
     </div>
   );
@@ -1800,9 +1963,16 @@ function Ajustes({ ctx }) {
             <Campo label="Endereço"><Entrada value={cfg.address} onChange={(e) => setCfg({ ...cfg, address: e.target.value })} disabled={!admin} /></Campo>
             <Campo label="Horário de funcionamento"><Entrada value={cfg.hours} onChange={(e) => setCfg({ ...cfg, hours: e.target.value })} disabled={!admin} /></Campo>
             <div className="px-2col">
-              <Campo label="Chave Pix"><Entrada value={cfg.pixKey} onChange={(e) => setCfg({ ...cfg, pixKey: e.target.value })} disabled={!admin} /></Campo>
-              <Campo label="Nome no Pix"><Entrada value={cfg.pixName} onChange={(e) => setCfg({ ...cfg, pixName: e.target.value })} disabled={!admin} /></Campo>
+              <Campo label="Chave Pix" dica="Vai na mensagem do pedido feito pelo catálogo.">
+                <Entrada value={cfg.pixKey} onChange={(e) => setCfg({ ...cfg, pixKey: e.target.value })} disabled={!admin} />
+              </Campo>
+              <Campo label="Tipo da chave">
+                <Selecao value={cfg.pixType || "CNPJ"} onChange={(e) => setCfg({ ...cfg, pixType: e.target.value })} disabled={!admin}>
+                  {["CNPJ", "CPF", "Celular", "E-mail", "Aleatória"].map((t) => <option key={t} value={t}>{t}</option>)}
+                </Selecao>
+              </Campo>
             </div>
+            <Campo label="Nome no Pix"><Entrada value={cfg.pixName} onChange={(e) => setCfg({ ...cfg, pixName: e.target.value })} disabled={!admin} /></Campo>
             <Campo label="Aviso de pagamento" dica="Aparece no catálogo."><Area value={cfg.paymentNote} onChange={(e) => setCfg({ ...cfg, paymentNote: e.target.value })} disabled={!admin} /></Campo>
             <Campo label="Aviso do cartão"><Entrada value={cfg.cardNote} onChange={(e) => setCfg({ ...cfg, cardNote: e.target.value })} disabled={!admin} /></Campo>
             {admin && <Botao icone="check" style={{ width: "100%" }} onClick={() => tenta(() => api.saveSettings(cfg), "Ajustes salvos.")}>Salvar</Botao>}
