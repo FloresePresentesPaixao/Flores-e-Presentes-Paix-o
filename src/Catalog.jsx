@@ -7,7 +7,7 @@ import * as api from "./api";
    =========================================================================== */
 
 const ARQUIVOS = "https://qojpijbimbwdxuwjvypf.supabase.co/storage/v1/object/public/paixao/";
-const LOGO = ARQUIVOS + "logo.jpg";
+const LOGO = ARQUIVOS + "logo-redonda.png";   /* selo já recortado, sem fundo */
 /* Fotos da abertura: ABERTURA01 a ABERTURA07 no bucket.
    Tenta .jpg e, se não existir, .jpeg — sem precisar renomear nada.   */
 const ABERTURAS = [1, 2, 3, 4, 5, 6, 7].map((n) => `${ARQUIVOS}ABERTURA0${n}`);
@@ -151,6 +151,8 @@ function Vitrine() {
         )}
       </main>
 
+      <Rodape loja={dados.loja} />
+
       {tela.cesta && (
         <Sacola itens={cesta} total={total} temConsulta={temConsulta} onFechar={fechar} onRemover={remover}
           onLimpar={() => setCesta([])} onSeguir={() => { fechar(); setTimeout(() => abrir({ formulario: true }), 240); }} />
@@ -159,6 +161,22 @@ function Vitrine() {
         <Formulario dados={dados} onFechar={fechar} onEnviar={(f) => { fechar(); enviarWhats(f); }} />
       )}
     </div>
+  );
+}
+
+/* --------------------------------- Rodapé --------------------------------- */
+function Rodape({ loja }) {
+  return (
+    <footer style={{ borderTop: `1px solid ${C.linha}`, background: C.branco, padding: "18px 16px 22px", textAlign: "center" }}>
+      <div style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.vinho }}>
+        {loja.storeName || "Flores e Presentes Paixão"}
+      </div>
+      {loja.address && <div style={{ fontSize: 12.5, color: C.ink2, marginTop: 4 }}>{loja.address}</div>}
+      {loja.hours && <div style={{ fontSize: 12.5, color: C.ink3, marginTop: 2 }}>{loja.hours}</div>}
+      <div style={{ fontSize: 12, color: C.ink3, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.linha}` }}>
+        Programa feito por <strong style={{ color: C.ink2 }}>Miguel Borges</strong> — (34) 9 9188-1557
+      </div>
+    </footer>
   );
 }
 
@@ -174,7 +192,7 @@ function FotoFundo({ base, visivel }) {
       onError={() => (ext === ".jpg" ? setExt(".jpeg") : setSumiu(true))}
       style={{
         position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%",
-        objectFit: "cover", opacity: visivel ? 0.32 : 0, transition: "opacity 1.4s ease",
+        objectFit: "cover", opacity: visivel ? 0.55 : 0, transition: "opacity 1.4s ease",
       }}
     />
   );
@@ -196,7 +214,7 @@ function Abertura({ loja, onEntrar }) {
     <div style={{ fontFamily: FONT, minHeight: "100vh", background: `linear-gradient(165deg, ${C.vinhoEsc} 0%, ${C.vinho} 55%, #A82A3E 100%)`, display: "grid", placeItems: "center", position: "relative", overflow: "hidden", padding: 24 }}>
       <style>{CSS}</style>
       {ABERTURAS.map((b, k) => <FotoFundo key={b} base={b} visivel={k === foto} />)}
-      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, background: `linear-gradient(180deg, rgba(94,16,31,.55), rgba(94,16,31,.88))` }} />
+      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, background: `linear-gradient(180deg, rgba(94,16,31,.30), rgba(94,16,31,.62) 55%, rgba(94,16,31,.80))` }} />
       {petalas.map((p) => (
         <span key={p.i} style={{
           position: "absolute", top: "-10%", left: `${p.left}%`, width: p.tam, height: p.tam * 1.25,
@@ -207,9 +225,9 @@ function Abertura({ loja, onEntrar }) {
 
       <div style={{ position: "relative", zIndex: 2, textAlign: "center", maxWidth: 520 }}>
         <div style={{ display: "inline-block", marginBottom: 26, animation: "flSelo 1s cubic-bezier(.16,1,.3,1) both" }}>
-          <div style={{ width: 150, height: 150, borderRadius: "50%", overflow: "hidden", background: "#fff", boxShadow: "0 24px 60px rgba(0,0,0,.35)" }}>
+          <div style={{ width: 158, height: 158, borderRadius: "50%", display: "grid", placeItems: "center", boxShadow: "0 0 0 1px rgba(255,255,255,.18), 0 20px 54px rgba(0,0,0,.34)" }}>
             <img src={LOGO} alt="Flores e Presentes Paixão" onError={(e) => { e.currentTarget.style.display = "none"; }}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
           </div>
         </div>
 
@@ -241,7 +259,7 @@ function Topo({ loja, onSacola, n }) {
   return (
     <header style={{ background: "rgba(253,247,244,.92)", backdropFilter: "blur(12px)", borderBottom: `1px solid ${C.linha}`, padding: "10px 16px", display: "flex", alignItems: "center", gap: 11, position: "sticky", top: 0, zIndex: 40 }}>
       <img src={LOGO} alt="" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-        style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover", border: `1px solid ${C.linha}` }} />
+        style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "contain", background: "#fff" }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 600, lineHeight: 1.1 }}>Paixão</div>
         <div style={{ fontSize: 11, color: C.ink3 }}>Flores e Presentes</div>
