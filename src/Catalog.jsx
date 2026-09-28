@@ -147,7 +147,8 @@ function Vitrine() {
           </div>
         )}
         {!carregando && !erro && lista.length > 0 && (
-          <Album lista={lista} indice={indice} setIndice={setIndice} onAdd={adicionar} loja={dados.loja} />
+          <Album lista={lista} indice={indice} setIndice={setIndice} onAdd={adicionar} loja={dados.loja}
+            onAmpliar={(p, i) => abrir({ foto: { id: p.id, i } })} />
         )}
       </main>
 
@@ -160,6 +161,10 @@ function Vitrine() {
       {tela.formulario && (
         <Formulario dados={dados} onFechar={fechar} onEnviar={(f) => { fechar(); enviarWhats(f); }} />
       )}
+      {tela.foto && (() => {
+        const p = dados.produtos.find((x) => x.id === tela.foto.id);
+        return p && p.photos.length ? <Lupa fotos={p.photos} inicial={tela.foto.i} nome={p.name} onFechar={fechar} /> : null;
+      })()}
     </div>
   );
 }
@@ -297,7 +302,7 @@ function Filtros({ dados, filtro, setFiltro }) {
 }
 
 /* --------------------------- Álbum que passa de lado ---------------------- */
-function Album({ lista, indice, setIndice, onAdd, loja }) {
+function Album({ lista, indice, setIndice, onAdd, loja, onAmpliar }) {
   const toque = useRef(null);
   const i = Math.min(indice, lista.length - 1);
   const p = lista[i];
@@ -330,7 +335,7 @@ function Album({ lista, indice, setIndice, onAdd, loja }) {
         </div>
       </div>
 
-      <Ficha key={p.id} p={p} onAdd={onAdd} loja={loja} />
+      <Ficha key={p.id} p={p} onAdd={onAdd} loja={loja} onAmpliar={onAmpliar} />
 
       <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
         <button onClick={() => vai(-1)} disabled={i === 0} className="fl-btn" aria-label="Anterior"
@@ -345,7 +350,7 @@ function Album({ lista, indice, setIndice, onAdd, loja }) {
   );
 }
 
-function Ficha({ p, onAdd, loja }) {
+function Ficha({ p, onAdd, loja, onAmpliar }) {
   const [tam, setTam] = useState(p.sizes[0]?.name || "");
   const [qtd, setQtd] = useState(1);
   const [foto, setFoto] = useState(0);
@@ -366,8 +371,8 @@ function Ficha({ p, onAdd, loja }) {
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#fff", border: `1px solid ${C.linha}`, borderRadius: 22, overflow: "hidden", boxShadow: "0 10px 34px rgba(58,42,46,.09)", animation: "flEntra .4s cubic-bezier(.16,1,.3,1) both" }}>
-      <div onClick={() => fotos.length > 1 && setFoto((f) => (f + 1) % fotos.length)}
-        style={{ position: "relative", width: "100%", paddingTop: "78%", background: `linear-gradient(145deg, ${C.rosaSoft}, ${C.creme2})`, flexShrink: 0, cursor: fotos.length > 1 ? "pointer" : "default" }}>
+      <div onClick={() => { if (fotos[foto] && onAmpliar) onAmpliar(p, foto); }}
+        style={{ position: "relative", width: "100%", paddingTop: "78%", background: `linear-gradient(145deg, ${C.rosaSoft}, ${C.creme2})`, flexShrink: 0, cursor: fotos[foto] ? "zoom-in" : "default" }}>
         <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {fotos[foto]
             ? <img src={fotos[foto]} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -376,9 +381,17 @@ function Ficha({ p, onAdd, loja }) {
         {p.onRequest && (
           <span style={{ position: "absolute", top: 12, left: 12, background: "rgba(142,27,46,.9)", color: "#fff", fontSize: 11.5, fontWeight: 600, padding: "5px 11px", borderRadius: 999 }}>Sob consulta</span>
         )}
+        {fotos[foto] && (
+          <span style={{ position: "absolute", bottom: 10, right: 10, display: "flex", alignItems: "center", gap: 6, background: "rgba(58,42,46,.62)", color: "#fff", fontSize: 12.5, fontWeight: 600, padding: "7px 13px", borderRadius: 999, backdropFilter: "blur(4px)" }}>
+            ⌕ Ampliar
+          </span>
+        )}
         {fotos.length > 1 && (
-          <div style={{ position: "absolute", bottom: 10, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 5 }}>
-            {fotos.map((_, k) => <span key={k} style={{ width: 6, height: 6, borderRadius: "50%", background: k === foto ? "#fff" : "rgba(255,255,255,.55)" }} />)}
+          <div style={{ position: "absolute", bottom: 12, left: 12, display: "flex", gap: 5 }}>
+            {fotos.map((_, k) => (
+              <span key={k} onClick={(e) => { e.stopPropagation(); setFoto(k); }}
+                style={{ width: 7, height: 7, borderRadius: "50%", cursor: "pointer", background: k === foto ? "#fff" : "rgba(255,255,255,.5)" }} />
+            ))}
           </div>
         )}
       </div>
@@ -435,6 +448,104 @@ function Ficha({ p, onAdd, loja }) {
           {posto ? "✓ Na sacola" : "Adicionar à sacola"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* -------------------- Foto em tela cheia, com ampliação ------------------- */
+/* Simples de propósito: um único nível de ampliação, usando a rolagem do
+   próprio navegador. Sem pinça e sem transformação — é o que funciona igual
+   no iPhone, no Android e no computador.                                    */
+function Lupa({ fotos, inicial = 0, nome, onFechar }) {
+  const [i, setI] = useState(Math.min(inicial || 0, fotos.length - 1));
+  const [ampliado, setAmpliado] = useState(false);
+  const area = useRef(null);
+
+  /* trava a página atrás e desliga o zoom do próprio navegador */
+  useEffect(() => {
+    const corpo = document.body;
+    const antes = { overflow: corpo.style.overflow, position: corpo.style.position, width: corpo.style.width, top: corpo.style.top };
+    const rolagem = window.scrollY;
+    corpo.style.overflow = "hidden";
+    corpo.style.position = "fixed";
+    corpo.style.width = "100%";
+    corpo.style.top = `-${rolagem}px`;
+
+    const barra = (e) => e.preventDefault();
+    document.addEventListener("gesturestart", barra, { passive: false });
+    document.addEventListener("gesturechange", barra, { passive: false });
+    document.addEventListener("gestureend", barra, { passive: false });
+
+    return () => {
+      corpo.style.overflow = antes.overflow;
+      corpo.style.position = antes.position;
+      corpo.style.width = antes.width;
+      corpo.style.top = antes.top;
+      window.scrollTo(0, rolagem);
+      document.removeEventListener("gesturestart", barra);
+      document.removeEventListener("gesturechange", barra);
+      document.removeEventListener("gestureend", barra);
+    };
+  }, []);
+
+  /* ao ampliar, começa mostrando o meio da foto */
+  useEffect(() => {
+    const el = area.current;
+    if (!el) return;
+    if (ampliado) {
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+      el.scrollTop = (el.scrollHeight - el.clientHeight) / 2;
+    } else { el.scrollLeft = 0; el.scrollTop = 0; }
+  }, [ampliado, i]);
+
+  useEffect(() => {
+    const tecla = (e) => {
+      if (e.key === "Escape") onFechar();
+      if (e.key === "ArrowRight") trocar(1);
+      if (e.key === "ArrowLeft") trocar(-1);
+    };
+    window.addEventListener("keydown", tecla);
+    return () => window.removeEventListener("keydown", tecla);
+  }); // eslint-disable-line
+
+  const trocar = (d) => { setAmpliado(false); setI((k) => (k + d + fotos.length) % fotos.length); };
+
+  const redondo = { width: 46, height: 46, borderRadius: "50%", border: "1px solid rgba(255,255,255,.28)", background: "rgba(0,0,0,.48)", color: "#fff", fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 };
+
+  return (
+    <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, left: 0, height: "100dvh", zIndex: 100, background: "#241017", animation: "flFade .22s ease both" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 3, display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "linear-gradient(180deg,rgba(0,0,0,.55),transparent)" }}>
+        <button onClick={onFechar} aria-label="Voltar" className="fl-btn" style={redondo}>←</button>
+        <div style={{ color: "#fff", fontSize: 14.5, fontWeight: 600, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>
+        {fotos.length > 1 && <div style={{ color: "rgba(255,255,255,.7)", fontSize: 13 }}>{i + 1}/{fotos.length}</div>}
+      </div>
+
+      <div ref={area}
+        style={{
+          position: "absolute", top: 0, right: 0, bottom: 0, left: 0,
+          overflow: ampliado ? "auto" : "hidden", WebkitOverflowScrolling: "touch",
+          display: ampliado ? "block" : "flex", alignItems: "center", justifyContent: "center",
+        }}>
+        <img src={fotos[i]} alt={nome} draggable={false} onDragStart={(e) => e.preventDefault()}
+          style={ampliado
+            ? { width: "220%", maxWidth: "none", display: "block", userSelect: "none", WebkitUserSelect: "none" }
+            : { maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", userSelect: "none", WebkitUserSelect: "none" }} />
+      </div>
+
+      <div style={{ position: "absolute", bottom: 22, left: 0, right: 0, zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "0 14px" }}>
+        {fotos.length > 1 && <button onClick={() => trocar(-1)} aria-label="Foto anterior" className="fl-btn" style={redondo}>‹</button>}
+        <button onClick={() => setAmpliado((v) => !v)} className="fl-btn"
+          style={{ ...redondo, width: "auto", borderRadius: 999, padding: "0 20px", fontSize: 15, fontWeight: 700, gap: 8 }}>
+          {ampliado ? "Reduzir" : "⌕ Ampliar"}
+        </button>
+        {fotos.length > 1 && <button onClick={() => trocar(1)} aria-label="Próxima foto" className="fl-btn" style={redondo}>›</button>}
+      </div>
+
+      {ampliado && (
+        <div style={{ position: "absolute", bottom: 80, left: 0, right: 0, textAlign: "center", color: "rgba(255,255,255,.55)", fontSize: 12.5, pointerEvents: "none" }}>
+          Arraste para ver os detalhes
+        </div>
+      )}
     </div>
   );
 }
