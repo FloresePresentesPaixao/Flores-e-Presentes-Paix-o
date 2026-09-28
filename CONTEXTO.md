@@ -3,7 +3,7 @@
 > **Para o Claude:** este arquivo resume o projeto inteiro. Leia antes de propor mudanças.
 > Ao terminar cada alteração, atualize o "Histórico" e entregue este arquivo junto.
 >
-> Última atualização: 28/09/2026
+> Última atualização: 28/09/2026 (2ª rodada)
 
 ## O que é
 
@@ -42,8 +42,8 @@ React + Vite + `@supabase/supabase-js`, estilos inline, fontes Playfair Display 
 ## Arquivos do repositório
 
 `index.html` (21) · `package.json` (16) · `vite.config.js` (4) · `wrangler.toml` (7) ·
-`public/manifest.json` (25) · `src/config.js` (6) · `src/main.jsx` (9) · `src/api.js` (344) ·
-`src/App.jsx` (1903) · `src/Catalog.jsx` (766)
+`public/manifest.json` (25) · `src/config.js` (6) · `src/main.jsx` (9) · `src/api.js` (365) ·
+`src/App.jsx` (2078) · `src/Catalog.jsx` (867)
 
 `main.jsx`: se o endereço tem "catalogo", abre o Catálogo; senão, o App.
 
@@ -60,8 +60,18 @@ Tabelas: `profiles`, `categories`, `occasions` (ocasiões), `delivery_zones` (ba
 pessoas diferentes; endereço com bairro ligado à taxa; data e faixa de horário; marcação
 de urgente; e os três campos do cartão (mensagem, de, para).
 
-Produtos aceitam: preço fechado, "a partir de", **sob consulta**, tamanhos P/M/G com preços
+Produtos aceitam: preço fechado, "a partir de", **sob consulta** (com valor de referência
+opcional, que vira "Sob consulta — a partir de R$ ..."), tamanhos P/M/G com preços
 diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
+
+**Promoção** fica em `promo_price`, campo separado: o preço de tabela nunca é sobrescrito, e
+encerrar a promoção é apagar esse campo. Vale só para produto de preço único — sem tamanhos
+e sem "sob consulta". O catálogo e os pedidos lançados no app usam o preço promocional
+enquanto ele estiver no ar; o pedido guarda o valor cobrado, então promoção encerrada não
+mexe em pedido antigo.
+
+`show_quote` liga ou desliga o botão "Consultar valores" de cada produto no catálogo.
+`settings.pix_type` guarda o tipo da chave Pix (CNPJ, CPF, Celular, E-mail, Aleatória).
 
 ## App — o que existe
 
@@ -69,6 +79,9 @@ diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
 - **Pedidos:** filtros, busca, cadastro em 5 passos (quem compra, itens, entrega, cartão,
   valores). O bairro traz a taxa sozinho; cliente novo entra no cadastro automaticamente.
   A ficha muda etapa, marca pago, abre o endereço no mapa, avisa pelo WhatsApp e cancela.
+- **Promoções:** aba própria. Escolhe o produto, põe o valor, e ele aparece com o preço
+  riscado no catálogo. A lista "No ar agora" mostra o desconto e tem o botão de tirar, que
+  devolve o preço cadastrado. Também dá para pôr e tirar pela ficha do produto.
 - **Produtos, Clientes, Relatórios** (faturamento, ticket médio, entregas, mais vendidos,
   categorias e bairros) e **Ajustes** (dados da loja, bairros e taxas, categorias, ocasiões,
   etapas, usuários, exportação CSV).
@@ -87,10 +100,18 @@ diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
   **Não usar pinça nem `transform: scale`:** foi tentado na FA e travava a tela em alguns
   celulares. Enquanto a foto está aberta, a página atrás fica travada (`body` fixo) e o
   zoom do navegador é bloqueado. O voltar do celular fecha a foto e devolve ao catálogo.
+- **Falar com a loja:** todo produto tem "Ver mais desse tipo" (abre o WhatsApp citando a
+  categoria) e "Consultar valores" (citando o produto e o código). O segundo é ligado por
+  produto, no cadastro.
+- **Promoções:** filtro "🔥 Promoções" no topo, que só aparece quando existe alguma; selo na
+  foto e preço antigo riscado.
 - **Sacola** salva no navegador; avisa quando há item sob consulta.
 - **Formulário antes de enviar:** nome, entregar ou retirar, quem recebe, endereço, bairro
   (mostrando a taxa), data, horário, mensagem do cartão com "de" e "para", forma de
   pagamento e observações. Tudo vai formatado na mensagem do WhatsApp.
+- **Pix:** escolhendo Pix, aparece a chave com botão de copiar, e ela também entra no fim da
+  mensagem do WhatsApp com o pedido do comprovante. Chave da loja: CNPJ 42077814000174,
+  guardada em `settings` — não está fixa no código.
 - **Rodapé:** nome da loja, endereço, horário e o crédito
   **"Programa feito por Miguel Borges — (34) 9 9188-1557"**.
 - **Rede de proteção** (`Guarda`): qualquer erro mostra um aviso com botão de voltar, nunca
@@ -135,7 +156,8 @@ com o link direto do projeto certo.
 ## O que falta
 
 - Cadastrar os produtos com foto, os bairros com taxa e testar um pedido de verdade.
-- Retorno da reunião com a dona (28/09) com os ajustes que ela pedir.
+- Testar uma promoção de ponta a ponta: pôr, conferir no catálogo, lançar o pedido no app e
+  tirar da promoção.
 - Avaliar domínio próprio (`.com.br` no Registro.br, cerca de R$ 40/ano) e encurtar o
   endereço do Worker, que hoje é longo.
 
@@ -145,6 +167,11 @@ com o link direto do projeto certo.
   navegação lateral. Publicado no Cloudflare.
 - **27/09/2026 (noite):** manifesto e ícones para instalar na tela inicial; campos em duas
   colunas passaram a virar uma só no celular; modais passaram a usar `dvh`.
+- **28/09/2026 (2ª rodada):** aviso de que a entrega tem taxa na abertura do catálogo;
+  saudação do app passou a mostrar o nome da loja; botões "Ver mais desse tipo" e "Consultar
+  valores" em cada produto; "sob consulta" ganhou valor de referência; chave Pix na tela e na
+  mensagem do pedido; e **promoções** — campo na ficha do produto, aba de gestão no app e
+  destaque no catálogo.
 - **28/09/2026:** rodapé com o crédito do programador; abertura clareada (véu mais leve e
   fotos mais visíveis); logo trocada pelo `logo-circulo.jpg` (a versão PNG transparente
   virava quadrado preto ao ser enviada pelo celular); e **ampliação de foto** no catálogo,
