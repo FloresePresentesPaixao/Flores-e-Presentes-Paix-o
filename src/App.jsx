@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import * as api from "./api";
 
 /* ===========================================================================
@@ -98,7 +99,7 @@ input,select,textarea,button{font-family:inherit}
 @keyframes pxUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes pxSheet{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
 @keyframes pxGira{to{transform:rotate(360deg)}}
-.px-up{animation:pxUp .24s cubic-bezier(.16,1,.3,1) both}
+.px-up{animation:pxUp .24s cubic-bezier(.16,1,.3,1)}
 .px-fade{animation:pxFade .2s ease both}
 .px-scroll::-webkit-scrollbar{width:8px;height:8px}
 .px-scroll::-webkit-scrollbar-thumb{background:#E2CFC8;border-radius:99px}
@@ -214,29 +215,45 @@ function Carregando({ texto = "Carregando" }) {
 function Modal({ aberto, aoFechar, titulo, sub, children, largo, rodape }) {
   useVoltar(!!aberto, aoFechar);
   if (!aberto) return null;
-  return (
+  /* Desenhada direto no corpo da página: assim ela se ancora na tela, e não no
+     bloco que tem a animação de troca de aba (um transform ali fazia o rodapé
+     com os botões cair para fora do visível no celular).                      */
+  return createPortal(
     <div className="px-fade" onClick={aoFechar}
-      style={{ position: "fixed", top: 0, right: 0, bottom: 0, left: 0, height: "100dvh", background: "rgba(58,42,46,.45)", zIndex: 90, display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
-      <div onClick={(e) => e.stopPropagation()} className="px-scroll"
-        style={{ background: "#fff", width: "100%", maxWidth: largo ? 760 : 520, maxHeight: "92dvh", overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", borderRadius: "22px 22px 0 0", boxShadow: SOMBRA_ALTA, animation: "pxSheet .26s cubic-bezier(.16,1,.3,1) both" }}>
-        <div style={{ position: "sticky", top: 0, background: "#fff", zIndex: 2, padding: "18px 20px 14px", borderBottom: `1px solid ${T.line}`, borderRadius: "22px 22px 0 0" }}>
+      style={{ position: "fixed", top: 0, right: 0, bottom: 0, left: 0, background: "rgba(58,42,46,.45)", zIndex: 90, display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(3px)" }}>
+      {/* altura fixa: o miolo rola por dentro e os botões ficam sempre à vista */}
+      <div onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff", width: "100%", maxWidth: largo ? 760 : 520,
+          height: "92dvh", maxHeight: "92dvh", display: "flex", flexDirection: "column",
+          borderRadius: "22px 22px 0 0", boxShadow: SOMBRA_ALTA,
+          animation: "pxSheet .26s cubic-bezier(.16,1,.3,1) both", overflow: "hidden",
+        }}>
+        <div style={{ flexShrink: 0, padding: "18px 20px 14px", borderBottom: `1px solid ${T.line}` }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
             <div>
               <h3 style={{ margin: 0, fontFamily: SERIF, fontSize: 19, fontWeight: 600 }}>{titulo}</h3>
               {sub && <div style={{ fontSize: 13, color: T.ink2, marginTop: 3 }}>{sub}</div>}
             </div>
             <button onClick={aoFechar} aria-label="Fechar" className="px-btn"
-              style={{ width: 32, height: 32, borderRadius: 9, border: "none", background: T.bg2, color: T.ink2, cursor: "pointer", display: "grid", placeItems: "center" }}>
+              style={{ width: 32, height: 32, borderRadius: 9, border: "none", background: T.bg2, color: T.ink2, cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <Icone n="fechar" s={16} />
             </button>
           </div>
         </div>
-        <div style={{ padding: "18px 20px 22px" }}>{children}</div>
+
+        <div className="px-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", WebkitOverflowScrolling: "touch", padding: "18px 20px 22px" }}>
+          {children}
+        </div>
+
         {rodape && (
-          <div style={{ position: "sticky", bottom: 0, background: "#fff", borderTop: `1px solid ${T.line}`, padding: "14px 20px", display: "flex", gap: 10 }}>{rodape}</div>
+          <div style={{ flexShrink: 0, borderTop: `1px solid ${T.line}`, background: "#fff", padding: "14px 20px", paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))", display: "flex", gap: 10 }}>
+            {rodape}
+          </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
