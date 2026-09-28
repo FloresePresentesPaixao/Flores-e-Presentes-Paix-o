@@ -51,6 +51,7 @@ export async function loadMeta() {
       hours: s.hours || "",
       pixKey: s.pix_key || "",
       pixName: s.pix_name || "",
+      pixType: s.pix_type || "CNPJ",
       paymentNote: s.payment_note || "",
       cardNote: s.card_note || "",
     },
@@ -82,6 +83,7 @@ export async function saveSettings(s) {
   const { error } = await supabase.from("settings").update({
     store_name: s.storeName, whatsapp: s.whatsapp, instagram: s.instagram,
     address: s.address, hours: s.hours, pix_key: s.pixKey, pix_name: s.pixName,
+    pix_type: s.pixType || "CNPJ",
     payment_note: s.paymentNote, card_note: s.cardNote,
   }).eq("id", 1);
   if (error) erro(error);
@@ -118,6 +120,8 @@ function montaProduto(p) {
     id: p.id, name: p.name, sku: p.sku || "", categoryId: p.category_id,
     description: p.description || "", price: Number(p.price) || 0,
     onRequest: !!p.on_request, priceFrom: !!p.price_from, madeToOrder: !!p.made_to_order,
+    promoPrice: p.promo_price == null || p.promo_price === "" ? null : Number(p.promo_price),
+    showQuote: p.show_quote !== false,
     leadHours: p.lead_hours, trackStock: !!p.track_stock, stock: p.stock_qty || 0,
     active: p.active !== false,
     mainImage: p.main_image_url, gallery: fotos,
@@ -164,6 +168,8 @@ export async function saveProduct(f) {
     lead_hours: f.leadHours ? Number(f.leadHours) : null,
     track_stock: !!f.trackStock, stock_qty: Number(f.stock) || 0,
     main_image_url: f.mainImage || null, active: f.active !== false,
+    promo_price: f.promoPrice === "" || f.promoPrice == null ? null : Number(f.promoPrice),
+    show_quote: f.showQuote !== false,
   };
   let id = f.id;
   if (id) {
@@ -189,6 +195,20 @@ export async function saveProduct(f) {
   if (ocas.length) await supabase.from("product_occasions").insert(ocas);
 
   return id;
+}
+
+/* Promoção: guardada num campo separado, para o preço de tabela nunca se perder.
+   Tirar da promoção é apagar esse campo — o produto volta ao valor cadastrado. */
+export async function setPromo(id, preco) {
+  const valor = Number(preco);
+  if (!valor || valor <= 0) erro({ message: "Informe um valor de promoção maior que zero." });
+  const { error } = await supabase.from("products").update({ promo_price: valor }).eq("id", id);
+  if (error) erro(error);
+}
+
+export async function clearPromo(id) {
+  const { error } = await supabase.from("products").update({ promo_price: null }).eq("id", id);
+  if (error) erro(error);
 }
 
 export async function softDeleteProduct(id) {
@@ -338,6 +358,7 @@ export async function loadCatalog() {
       storeName: s.store_name || "Flores e Presentes Paixão",
       whatsapp: s.whatsapp || "", instagram: s.instagram || "",
       address: s.address || "", hours: s.hours || "",
+      pixKey: s.pix_key || "", pixName: s.pix_name || "", pixType: s.pix_type || "CNPJ",
       paymentNote: s.payment_note || "", cardNote: s.card_note || "",
     },
   };
