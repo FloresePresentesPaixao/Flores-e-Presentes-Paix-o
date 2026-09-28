@@ -43,7 +43,7 @@ React + Vite + `@supabase/supabase-js`, estilos inline, fontes Playfair Display 
 
 `index.html` (21) · `package.json` (16) · `vite.config.js` (4) · `wrangler.toml` (7) ·
 `public/manifest.json` (25) · `src/config.js` (6) · `src/main.jsx` (9) · `src/api.js` (344) ·
-`src/App.jsx` (1891) · `src/Catalog.jsx` (655)
+`src/App.jsx` (1891) · `src/Catalog.jsx` (766)
 
 `main.jsx`: se o endereço tem "catalogo", abre o Catálogo; senão, o App.
 
@@ -81,6 +81,12 @@ diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
   escuras dentro do círculo).
 - **Navegação lateral:** um produto por tela, passando com o dedo, pelas setas ou pelas
   teclas. Filtro por ocasião e por categoria no topo. Marcação "3 de 6" com bolinhas.
+- **Ampliar a foto:** o cartão já mostra o selo "⌕ Ampliar" na primeira olhada. Tocando na
+  foto abre a tela cheia (componente `Lupa`), com um único nível de ampliação — o botão
+  alterna entre "Ampliar" e "Reduzir" e o cliente arrasta usando a rolagem do navegador.
+  **Não usar pinça nem `transform: scale`:** foi tentado na FA e travava a tela em alguns
+  celulares. Enquanto a foto está aberta, a página atrás fica travada (`body` fixo) e o
+  zoom do navegador é bloqueado. O voltar do celular fecha a foto e devolve ao catálogo.
 - **Sacola** salva no navegador; avisa quando há item sob consulta.
 - **Formulário antes de enviar:** nome, entregar ou retirar, quem recebe, endereço, bairro
   (mostrando a taxa), data, horário, mensagem do cartão com "de" e "para", forma de
@@ -102,8 +108,16 @@ diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
 
 ## Arquivos no bucket `paixao`
 
-`logo.jpg`, `logo-redonda.png`, `icone.jpg`, `icone-192.png`, `icone-512.png` e
-`ABERTURA01` a `ABERTURA07`.
+`logo-circulo.jpg` (a que o app e o catálogo usam), `logo.jpg`, `icone.jpg`,
+`icone-192.png`, `icone-512.png` e `ABERTURA01` a `ABERTURA07`.
+
+**Cuidado com a logo:** a versão recortada em PNG com fundo transparente
+(`logo-redonda.png`) **não deu certo** — ao subir pelo celular a transparência virou um
+quadrado preto. A solução foi o `logo-circulo.jpg`: imagem quadrada com o selo
+centralizado sobre o creme da própria marca, exibida com `borderRadius: 50%`. O app, o
+ícone do navegador e o manifesto apontam todos para esse mesmo arquivo.
+Ao subir imagens pelo celular, mandar pela opção de **arquivos**, não pela galeria, que
+recomprime.
 
 ## Como o Miguel prefere trabalhar
 
@@ -125,8 +139,10 @@ com o link direto do projeto certo.
 - **27/09/2026 (noite):** manifesto e ícones para instalar na tela inicial; campos em duas
   colunas passaram a virar uma só no celular; modais passaram a usar `dvh`.
 - **28/09/2026:** rodapé com o crédito do programador; abertura clareada (véu mais leve e
-  fotos mais visíveis) e logo trocada pela versão redonda recortada, que tirou as manchas
-  escuras da borda.
+  fotos mais visíveis); logo trocada pelo `logo-circulo.jpg` (a versão PNG transparente
+  virava quadrado preto ao ser enviada pelo celular); e **ampliação de foto** no catálogo,
+  com o selo "Ampliar" já visível no cartão e a tela cheia com Ampliar/Reduzir, testada em
+  Android, iPhone e computador.
 
 ## Como continuar numa conta nova do Claude
 
