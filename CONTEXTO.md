@@ -43,7 +43,7 @@ React + Vite + `@supabase/supabase-js`, estilos inline, fontes Playfair Display 
 
 `index.html` (21) · `package.json` (16) · `vite.config.js` (4) · `wrangler.toml` (7) ·
 `public/manifest.json` (25) · `src/config.js` (6) · `src/main.jsx` (9) · `src/api.js` (344) ·
-`src/App.jsx` (1891) · `src/Catalog.jsx` (766)
+`src/App.jsx` (1903) · `src/Catalog.jsx` (766)
 
 `main.jsx`: se o endereço tem "catalogo", abre o Catálogo; senão, o App.
 
@@ -101,6 +101,13 @@ diferentes, controle de estoque opcional (para pelúcias e canecas) e ocasiões.
 - Nada de `aspect-ratio` no CSS (quebra no Safari antigo): usar `paddingTop` em porcentagem
   com filhos em `position: absolute`. Evitar `inset`; escrever `top/right/bottom/left`.
 - Modais usam `dvh`, não `vh`, senão a barra do navegador corta a tela no Android e iPhone.
+- **Modais são desenhados por portal (`createPortal` para o `document.body`).** A animação
+  de troca de aba (`.px-up`) deixava um `transform` no elemento que envolve o conteúdo, e
+  isso fazia o `position: fixed` se ancorar nele em vez da tela — o rodapé com os botões
+  Cancelar e Salvar caía para fora do visível no celular. Além do portal, a animação
+  deixou de reter o transform (tirado o `both`). **Não voltar o `both` nem tirar o portal.**
+- A janela do modal tem altura fixa (`92dvh`) com o miolo rolando por dentro; o cabeçalho e
+  o rodapé ficam presos, sem depender de `position: sticky`.
 - Campos em duas colunas viram uma só no celular (classes `.px-2col` e `.px-3col`).
 - No Cloudflare, **Retry build repete o commit antigo**: para pegar código novo, criar um
   deployment novo ou fazer qualquer commit.
@@ -142,7 +149,8 @@ com o link direto do projeto certo.
   fotos mais visíveis); logo trocada pelo `logo-circulo.jpg` (a versão PNG transparente
   virava quadrado preto ao ser enviada pelo celular); e **ampliação de foto** no catálogo,
   com o selo "Ampliar" já visível no cartão e a tela cheia com Ampliar/Reduzir, testada em
-  Android, iPhone e computador.
+  Android, iPhone e computador; e correção do modal, cujos botões Cancelar e Salvar ficavam
+  fora da tela no celular.
 
 ## Como continuar numa conta nova do Claude
 
