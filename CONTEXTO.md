@@ -147,6 +147,21 @@ centralizado sobre o creme da própria marca, exibida com `borderRadius: 50%`. O
 Ao subir imagens pelo celular, mandar pela opção de **arquivos**, não pela galeria, que
 recomprime.
 
+## Espaço do Supabase e acessos ao catálogo
+
+O plano gratuito guarda **1 GB** de arquivos. Foto de celular tem de 3 a 8 MB; sem tratamento o espaço acabaria em 150 a 300 fotos. Mesma receita aplicada na Udiflex, Danny e Caroline.
+
+1. **A foto encolhe sozinha antes de subir.** `uploadFile` chama `encolherImagem`: no máximo 1600 pixels no lado maior, WebP (ou JPEG, se o navegador não gerar WebP), qualidade 0,82. Cada foto cai para 200 a 350 KB. Se algo falhar, sobe o original em vez de quebrar o cadastro. Nunca contar com a pessoa editar a foto antes de subir.
+2. **Apagar apaga de verdade.** `removeFiles` tira o arquivo do Storage quando a foto é removida, trocada ou o produto é excluído.
+3. **Medidor em Ajustes** (só admin): porcentagem do 1 GB, divisão por pasta e o botão **Limpar arquivos sem uso**.
+4. **Quem é "sem uso":** `get_orphan_files()` só lista o que está na pasta `produtos`, não pertence a nenhum produto ativo e foi enviado há mais de uma hora. Logo e ícone ficam na raiz do bucket e nunca entram.
+5. **Nunca apagar com `delete from storage.objects`** — tira a linha da listagem e deixa o arquivo no servidor; o espaço não volta.
+6. Se a permissão de apagar não entrar pelo SQL: Storage → Policies → `paixao` → New policy → For full customization → **DELETE** → `authenticated` → USING `bucket_id = 'paixao'`.
+
+**Acessos ao catálogo.** A aba **Acessos** mostra quantas pessoas abriram o catálogo: hoje, 7 dias, 30 dias, desde o começo, e um gráfico dos últimos 14 dias. A tabela `catalog_visits` guarda só um código sorteado que fica no navegador de quem visita e a data — sem nome, telefone ou endereço de internet. A mesma pessoa só conta de novo depois de 30 minutos. Registro por `log_catalog_visit()` (liberada sem login), leitura por `get_catalog_stats()` (só logado). Datas no horário de Brasília.
+
+**SQL rodado:** `paixao_espaco_acessos.sql`.
+
 ## Como o Miguel prefere trabalhar
 
 Pelo celular, editando pelo GitHub no navegador. Para cada arquivo: **link pronto do GitHub
@@ -184,3 +199,5 @@ com o link direto do projeto certo.
 1. No GitHub: **Code → Download ZIP**.
 2. Numa conversa nova, envie o ZIP e escreva: *"Leia o CONTEXTO.md e vamos continuar o projeto."*
 3.
+
+- **29/09/2026:** foto passou a encolher sozinha antes de subir, exclusão passou a liberar espaço de verdade, medidor do 1 GB com limpeza em Ajustes e aba nova **Acessos**. SQL: `paixao_espaco_acessos.sql`.
