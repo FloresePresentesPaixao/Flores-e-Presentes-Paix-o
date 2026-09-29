@@ -40,6 +40,17 @@ const precoVigente = (p, tam) => {
 };
 
 const CSS = `*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* ---------------------------------------------------------------------------
+   TRAVA DE LARGURA — não remover.
+   Se qualquer elemento ficar mais largo que a tela, o navegador do celular
+   encolhe a página inteira para caber e sobra aquela faixa branca na lateral.
+   Estas linhas cortam o excesso na raiz, então isso nunca acontece, em
+   qualquer aparelho. O "clip" corta sem criar rolagem lateral, e por isso não
+   atrapalha cabeçalho grudado nem janela flutuante.
+   --------------------------------------------------------------------------- */
+html,body,#root{max-width:100%;overflow-x:clip}
+@supports not (overflow-x:clip){ html,body{overflow-x:hidden} }
+
 body{margin:0;background:${C.creme};color:${C.ink};font-family:${FONT};-webkit-font-smoothing:antialiased;overscroll-behavior-x:none}
 input,select,textarea,button{font-family:inherit}
 @keyframes flFade{from{opacity:0}to{opacity:1}}
