@@ -95,6 +95,7 @@ function Vitrine() {
 
   useEffect(() => {
     api.loadCatalog().then((d) => { setDados(d); setCarregando(false); }).catch(() => { setErro(true); setCarregando(false); });
+    api.logCatalogVisit();   /* conta o acesso, anônimo e sem travar nada */
   }, []);
   useEffect(() => { try { localStorage.setItem("fl_cesta", JSON.stringify(cesta)); } catch {} }, [cesta]);
 
