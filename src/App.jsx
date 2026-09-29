@@ -66,6 +66,7 @@ const ICONES = {
   local: "M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
   promocoes: "M19 5 5 19M7 9.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5M17 19.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5",
   presente: "M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M3 8h18v4H3zM12 8v13M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5",
+  acessos: "M12 5c-5 0-8.5 4.2-9.5 6.2a1.6 1.6 0 0 0 0 1.6C3.5 14.8 7 19 12 19s8.5-4.2 9.5-6.2a1.6 1.6 0 0 0 0-1.6C20.5 9.2 17 5 12 5M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6",
 };
 function Icone({ n, s = 18, cor = "currentColor", w = 1.75, style }) {
   return (
@@ -82,6 +83,7 @@ const NAV = [
   { id: "produtos", label: "Produtos" },
   { id: "clientes", label: "Clientes" },
   { id: "promocoes", label: "Promoções" },
+  { id: "acessos", label: "Acessos" },
   { id: "relatorios", label: "Relatórios" },
   { id: "ajustes", label: "Ajustes" },
 ];
@@ -389,6 +391,7 @@ export default function App() {
   const telas = {
     inicio: <Hoje ctx={ctx} />, pedidos: <Pedidos ctx={ctx} />, produtos: <Produtos ctx={ctx} />,
     clientes: <Clientes ctx={ctx} />, promocoes: <Promocoes ctx={ctx} />,
+    acessos: <Acessos ctx={ctx} />,
     relatorios: <Relatorios ctx={ctx} />, ajustes: <Ajustes ctx={ctx} />,
   };
 
@@ -1464,7 +1467,7 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
               <Icone n="upload" s={15} />{enviando ? "Enviando…" : "Escolher foto"}
               <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => enviarFoto(e, true)} />
             </label>
-            {f.mainImage && <button onClick={() => set("mainImage", null)} className="px-btn" style={{ marginLeft: 8, border: "none", background: "none", color: T.err, fontSize: 13, cursor: "pointer" }}>remover</button>}
+            {f.mainImage && <button onClick={() => { const u = f.mainImage; set("mainImage", null); api.removeFiles([u]); }} className="px-btn" style={{ marginLeft: 8, border: "none", background: "none", color: T.err, fontSize: 13, cursor: "pointer" }}>remover</button>}
           </div>
         </div>
       </Campo>
@@ -1474,7 +1477,7 @@ function FormProduto({ ctx, inicial, aoFechar, aoSalvar }) {
           {f.gallery.map((g, i) => (
             <div key={i} style={{ position: "relative", flexShrink: 0 }}>
               <img src={g} alt="" style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 11, border: `1px solid ${T.line}` }} />
-              <button onClick={() => set("gallery", f.gallery.filter((_, k) => k !== i))} className="px-btn"
+              <button onClick={() => { set("gallery", f.gallery.filter((_, k) => k !== i)); api.removeFiles([g]); }} className="px-btn"
                 style={{ position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: "50%", border: "none", background: T.err, color: "#fff", cursor: "pointer", display: "grid", placeItems: "center" }}>
                 <Icone n="fechar" s={11} />
               </button>
@@ -1899,6 +1902,192 @@ function Relatorios({ ctx }) {
 }
 
 /* --------------------------------- Ajustes -------------------------------- */
+/* ------------------------------- Acessos ----------------------------------
+   Quantas pessoas abriram o catálogo. A mesma pessoa só conta de novo depois
+   de 30 minutos, então o número não infla quando alguém atualiza a página.  */
+function Acessos({ ctx }) {
+  const { largo } = ctx;
+  const [d, setD] = useState(null);
+  const [indo, setIndo] = useState(true);
+
+  const buscar = useCallback(async () => {
+    setIndo(true);
+    try { setD(await api.loadCatalogStats()); } catch { setD(null); }
+    finally { setIndo(false); }
+  }, []);
+  useEffect(() => { buscar(); }, [buscar]);
+
+  if (indo && !d) {
+    return <Cartao style={{ padding: 40, textAlign: "center", color: T.ink3 }}>Carregando os acessos…</Cartao>;
+  }
+  if (!d) {
+    return (
+      <div>
+        <Titulo sub="Quantas pessoas abriram o catálogo">Acessos</Titulo>
+        <Cartao style={{ padding: 22 }}>
+          <div style={{ fontSize: 14, color: T.ink2, lineHeight: 1.6 }}>
+            Não deu para ler os acessos. Se continuar assim, falta rodar o
+            <b> paixao_espaco_acessos.sql</b> no Supabase.
+          </div>
+        </Cartao>
+      </div>
+    );
+  }
+
+  const dias = d.porDia.slice(-14);
+  const maior = Math.max(1, ...dias.map((x) => x.acessos));
+  const diaCurto = (iso) => {
+    const [a, m, di] = iso.split("-");
+    return `${di}/${m}`;
+  };
+
+  return (
+    <div>
+      <Titulo sub="Quantas pessoas abriram o catálogo">Acessos</Titulo>
+
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
+        <Indicador rotulo="Hoje" valor={num(d.hojeAcessos)} nota={`${num(d.hojePessoas)} pessoa(s)`} icone="acessos" cor={T.vinho} fundo={T.vinhoSoft} />
+        <Indicador rotulo="Últimos 7 dias" valor={num(d.seteAcessos)} nota={`${num(d.setePessoas)} pessoa(s)`} icone="acessos" cor={T.ok} fundo={T.okSoft} />
+        <Indicador rotulo="Últimos 30 dias" valor={num(d.trintaAcessos)} nota={`${num(d.trintaPessoas)} pessoa(s)`} icone="acessos" cor={T.ink} fundo={T.bg2} />
+        <Indicador rotulo="Desde o começo" valor={num(d.totalAcessos)} nota={`${num(d.totalPessoas)} pessoa(s)`} icone="relatorios" cor={T.ink2} fundo={T.bg2} />
+      </div>
+
+      <Titulo sub="Cada barra é um dia">Últimos 14 dias</Titulo>
+      <Cartao style={{ padding: "18px 16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 150 }}>
+          {dias.map((x) => (
+            <div key={x.dia} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <div style={{ fontSize: 10.5, color: x.acessos ? T.ink : T.ink3, fontWeight: 600 }}>{x.acessos || ""}</div>
+              <div title={`${x.acessos} acesso(s)`}
+                style={{
+                  width: "100%", height: `${Math.max(3, (x.acessos / maior) * 110)}px`,
+                  background: x.acessos ? T.vinho : T.line, borderRadius: "6px 6px 3px 3px", transition: "height .3s ease",
+                }} />
+              <div style={{ fontSize: 9.5, color: T.ink3, whiteSpace: "nowrap" }}>{diaCurto(x.dia)}</div>
+            </div>
+          ))}
+        </div>
+      </Cartao>
+
+      <div style={{ fontSize: 12.5, color: T.ink3, lineHeight: 1.6, marginTop: 16 }}>
+        A contagem é anônima: guardamos só um código sorteado que fica no navegador de quem visita,
+        para saber se é a mesma pessoa voltando. Nenhum nome, telefone ou localização é registrado.
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Botao tipo="neutro" onClick={buscar} disabled={indo}>{indo ? "Atualizando…" : "Atualizar"}</Botao>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------ Espaço usado ------------------------------ */
+const LIMITE_BYTES = 1024 * 1024 * 1024;
+const mb = (b) => `${((Number(b) || 0) / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
+
+function EspacoUsado({ avisar }) {
+  const [uso, setUso] = useState(null);
+  const [orfaos, setOrfaos] = useState(null);
+  const [indo, setIndo] = useState(true);
+  const [limpando, setLimpando] = useState(false);
+
+  const buscar = useCallback(async () => {
+    setIndo(true);
+    try {
+      const [u, o] = await Promise.all([api.loadStorageUsage(), api.loadOrphanFiles()]);
+      setUso(u); setOrfaos(o);
+    } catch { setUso(null); }
+    finally { setIndo(false); }
+  }, []);
+  useEffect(() => { buscar(); }, [buscar]);
+
+  const limpar = async () => {
+    if (!orfaos || !orfaos.lista.length) return;
+    if (!window.confirm(`Apagar ${num(orfaos.lista.length)} arquivo(s) que não pertencem mais a nenhum produto, liberando ${mb(orfaos.bytes)}?\n\nFoto de produto que está no catálogo não entra nesta conta. Isso não tem como desfazer.`)) return;
+    setLimpando(true);
+    try {
+      const n = await api.removeOrphanFiles(orfaos.lista.map((f) => f.caminho));
+      await buscar();
+      avisar(n ? `${num(n)} arquivo(s) apagados.` : "Nada foi apagado.", n ? "ok" : "alerta");
+    } catch (e) {
+      avisar(`Não deu para apagar: ${e.message}. Confira a permissão de DELETE no bucket.`, "erro");
+    } finally { setLimpando(false); }
+  };
+
+  if (indo && !uso) return <Cartao style={{ padding: 22, color: T.ink3, fontSize: 14 }}>Somando os arquivos…</Cartao>;
+  if (!uso) {
+    return (
+      <Cartao style={{ padding: 18 }}>
+        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Espaço usado</div>
+        <div style={{ fontSize: 12.5, color: T.ink2, lineHeight: 1.55 }}>
+          Não deu para ler agora. Se nunca aparecer, falta rodar o <b>paixao_espaco_acessos.sql</b> no Supabase.
+        </div>
+      </Cartao>
+    );
+  }
+
+  const pct = Math.min(100, (uso.bytes / LIMITE_BYTES) * 100);
+  const cor = pct >= 85 ? T.err : pct >= 70 ? T.warn : T.ok;
+  const nomes = { produtos: "Fotos dos produtos", raiz: "Logo e ícone" };
+
+  return (
+    <Cartao style={{ padding: 18, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Espaço usado</div>
+          <div style={{ fontSize: 12.5, color: T.ink2, marginTop: 2 }}>O plano gratuito do Supabase guarda até 1 GB de fotos.</div>
+        </div>
+        <Botao tipo="fantasma" tamanho="s" onClick={buscar} disabled={indo}>{indo ? "…" : "atualizar"}</Botao>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "14px 0 8px" }}>
+        <span style={{ fontSize: 26, fontWeight: 700, color: cor }}>{pct.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%</span>
+        <span style={{ fontSize: 13.5, color: T.ink2 }}>{mb(uso.bytes)} de 1 GB · {num(uso.arquivos)} arquivo(s)</span>
+      </div>
+      <div style={{ height: 10, background: T.bg2, borderRadius: 99, overflow: "hidden" }}>
+        <div style={{ width: `${Math.max(1.5, pct)}%`, height: "100%", background: cor, borderRadius: 99, transition: "width .3s ease" }} />
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        {uso.porPasta.map((p) => (
+          <div key={p.pasta} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${T.line}`, fontSize: 13.5 }}>
+            <span style={{ color: T.ink2 }}>{nomes[p.pasta] || p.pasta}</span>
+            <span style={{ fontWeight: 600 }}>{mb(p.bytes)} <span style={{ color: T.ink3, fontWeight: 500 }}>· {num(p.arquivos)}</span></span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: T.bg2, borderRadius: 12, padding: "12px 13px", marginTop: 14 }}>
+        <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 3 }}>Arquivos sem uso</div>
+        {!orfaos ? (
+          <div style={{ fontSize: 12.5, color: T.ink3 }}>Procurando…</div>
+        ) : orfaos.arquivos === 0 ? (
+          <div style={{ fontSize: 12.5, color: T.ink2, lineHeight: 1.55 }}>
+            Nada sobrando. Toda foto guardada pertence a um produto.
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 12.5, color: T.ink2, lineHeight: 1.55, marginBottom: 10 }}>
+              {num(orfaos.arquivos)} arquivo(s) ocupando <b>{mb(orfaos.bytes)}</b> não pertencem mais a nenhum produto.
+              São fotos de produtos já removidos e fotos trocadas.
+            </div>
+            <Botao tipo="perigo" tamanho="s" icone="lixo" onClick={limpar} disabled={limpando || indo}>
+              {limpando ? "Apagando…" : `Limpar e liberar ${mb(orfaos.bytes)}`}
+            </Botao>
+          </>
+        )}
+      </div>
+
+      {pct >= 70 && (
+        <div style={{ background: pct >= 85 ? T.errSoft : T.warnSoft, borderRadius: 12, padding: "12px 13px", marginTop: 12, fontSize: 13, color: T.ink2, lineHeight: 1.55 }}>
+          <b style={{ color: cor }}>{pct >= 85 ? "Espaço quase no fim." : "Passou de 70%."}</b>{" "}
+          Remova produtos que saíram de linha e fotos repetidas — agora isso libera espaço de verdade.
+        </div>
+      )}
+    </Cartao>
+  );
+}
+
 function Ajustes({ ctx }) {
   const { meta, user, avisar, recarregarMeta, produtos, pedidos, largo } = ctx;
   const [cfg, setCfg] = useState(meta.settings);
@@ -1950,6 +2139,8 @@ function Ajustes({ ctx }) {
   return (
     <div>
       <Titulo sub={admin ? "Você é administrador" : "Perfil de atendente"}>Ajustes</Titulo>
+
+      {admin && <EspacoUsado avisar={avisar} />}
 
       <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 16, alignItems: "start" }}>
         <div>
