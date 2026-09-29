@@ -103,6 +103,17 @@ function useVoltar(ativo, aoFechar) {
 
 /* ---------------------------------- CSS ----------------------------------- */
 const CSS = `*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* ---------------------------------------------------------------------------
+   TRAVA DE LARGURA — não remover.
+   Se qualquer elemento ficar mais largo que a tela, o navegador do celular
+   encolhe a página inteira para caber e sobra aquela faixa branca na lateral.
+   Estas linhas cortam o excesso na raiz, então isso nunca acontece, em
+   qualquer aparelho. O "clip" corta sem criar rolagem lateral, e por isso não
+   atrapalha cabeçalho grudado nem janela flutuante.
+   --------------------------------------------------------------------------- */
+html,body,#root{max-width:100%;overflow-x:clip}
+@supports not (overflow-x:clip){ html,body{overflow-x:hidden} }
+
 body{margin:0;background:${T.bg};color:${T.ink};font-family:${FONT};-webkit-font-smoothing:antialiased}
 input,select,textarea,button{font-family:inherit}
 @keyframes pxFade{from{opacity:0}to{opacity:1}}
@@ -1916,6 +1927,15 @@ function Acessos({ ctx }) {
     finally { setIndo(false); }
   }, []);
   useEffect(() => { buscar(); }, [buscar]);
+  /* 14 colunas com data não cabem num celular: em tela estreita mostramos 7.
+     Sem isso, a fileira fica mais larga que a tela e volta a faixa branca.  */
+  const [cabe14, setCabe14] = useState(typeof window !== "undefined" && window.innerWidth >= 640);
+  useEffect(() => {
+    const r = () => setCabe14(window.innerWidth >= 640);
+    window.addEventListener("resize", r);
+    return () => window.removeEventListener("resize", r);
+  }, []);
+
 
   if (indo && !d) {
     return <Cartao style={{ padding: 40, textAlign: "center", color: T.ink3 }}>Carregando os acessos…</Cartao>;
@@ -1934,7 +1954,7 @@ function Acessos({ ctx }) {
     );
   }
 
-  const dias = d.porDia.slice(-14);
+  const dias = d.porDia.slice(cabe14 ? -14 : -7);
   const maior = Math.max(1, ...dias.map((x) => x.acessos));
   const diaCurto = (iso) => {
     const [a, m, di] = iso.split("-");
@@ -1952,11 +1972,11 @@ function Acessos({ ctx }) {
         <Indicador rotulo="Desde o começo" valor={num(d.totalAcessos)} nota={`${num(d.totalPessoas)} pessoa(s)`} icone="relatorios" cor={T.ink2} fundo={T.bg2} />
       </div>
 
-      <Titulo sub="Cada barra é um dia">Últimos 14 dias</Titulo>
+      <Titulo sub="Cada barra é um dia">Últimos {dias.length} dias</Titulo>
       <Cartao style={{ padding: "18px 16px" }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 150 }}>
           {dias.map((x) => (
-            <div key={x.dia} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+            <div key={x.dia} style={{ flex: "1 1 0", minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <div style={{ fontSize: 10.5, color: x.acessos ? T.ink : T.ink3, fontWeight: 600 }}>{x.acessos || ""}</div>
               <div title={`${x.acessos} acesso(s)`}
                 style={{
