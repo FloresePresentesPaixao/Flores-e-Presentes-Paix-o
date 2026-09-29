@@ -161,6 +161,14 @@ export async function skuExists(sku, ignoreId) {
 }
 
 export async function saveProduct(f) {
+  /* fotos gravadas antes, para apagar as que saíram */
+  let fotosAntigas = [];
+  if (f.id) {
+    const { data: antigo } = await supabase.from("products")
+      .select("main_image_url, product_images(image_url)").eq("id", f.id).maybeSingle();
+    fotosAntigas = [antigo?.main_image_url, ...((antigo?.product_images || []).map((i) => i.image_url))].filter(Boolean);
+  }
+
   const base = {
     name: f.name, sku: f.sku || null, category_id: f.categoryId || null,
     description: f.description || null, price: Number(f.price) || 0,
@@ -194,6 +202,11 @@ export async function saveProduct(f) {
   const ocas = (f.occasionIds || []).map((o) => ({ product_id: id, occasion_id: o }));
   if (ocas.length) await supabase.from("product_occasions").insert(ocas);
 
+  /* o que saiu do produto sai também do Storage, senão o espaço nunca volta */
+  const fotosAgora = [f.mainImage, ...(f.gallery || [])].filter(Boolean);
+  const sobrando = fotosAntigas.filter((u) => !fotosAgora.includes(u));
+  if (sobrando.length) await removeFiles(sobrando);
+
   return id;
 }
 
@@ -212,17 +225,166 @@ export async function clearPromo(id) {
 }
 
 export async function softDeleteProduct(id) {
+  const { data: p } = await supabase.from("products")
+    .select("main_image_url, product_images(image_url)").eq("id", id).maybeSingle();
   const { error } = await supabase.from("products").update({ deleted: true }).eq("id", id);
   if (error) erro(error);
+  const fotos = [p?.main_image_url, ...((p?.product_images || []).map((i) => i.image_url))].filter(Boolean);
+  if (fotos.length) await removeFiles(fotos);
+}
+
+/* --------------------------------- Arquivos -------------------------------
+   O plano gratuito do Supabase guarda 1 GB. Foto de celular tem de 3 a 8 MB,
+   então sem tratamento o espaço acabaria em 150 a 300 fotos. Aqui a imagem é
+   reduzida no próprio aparelho antes de subir: no máximo 1600 pixels no lado
+   maior, bem mais do que o catálogo mostra. Cada foto cai para uns 200 a
+   350 KB e o mesmo 1 GB passa a caber alguns milhares, sem diferença na tela.
+   -------------------------------------------------------------------------- */
+const BUCKET = "paixao";
+const LADO_MAXIMO = 1600;
+const QUALIDADE = 0.82;
+const TAMANHO_MAXIMO_MB = 8;
+const RAIZ_PUBLICA = `/storage/v1/object/public/${BUCKET}/`;
+
+export function caminhoDoArquivo(url) {
+  const u = String(url || "");
+  const i = u.indexOf(RAIZ_PUBLICA);
+  if (i < 0) return null;
+  try { return decodeURIComponent(u.slice(i + RAIZ_PUBLICA.length).split("?")[0]) || null; }
+  catch { return u.slice(i + RAIZ_PUBLICA.length).split("?")[0] || null; }
+}
+
+/* Apaga de verdade. Sem isso, tirar a foto da tela só apaga o endereço no
+   banco e o arquivo fica ocupando espaço para sempre.                       */
+export async function removeFiles(urls) {
+  const caminhos = (Array.isArray(urls) ? urls : [urls]).map(caminhoDoArquivo).filter(Boolean);
+  if (!caminhos.length) return 0;
+  const { error } = await supabase.storage.from(BUCKET).remove(caminhos);
+  return error ? 0 : caminhos.length;
+}
+
+function lerImagem(file) {
+  if (typeof createImageBitmap === "function") {
+    return createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => lerPorTag(file));
+  }
+  return lerPorTag(file);
+}
+function lerPorTag(file) {
+  return new Promise((ok, falha) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); falha(new Error("imagem")); };
+    img.src = url;
+  });
+}
+const paraBlob = (canvas, tipo, q) => new Promise((ok) => canvas.toBlob(ok, tipo, q));
+async function melhorBlob(canvas, q) {
+  const webp = await paraBlob(canvas, "image/webp", q);
+  if (webp && webp.type === "image/webp") return webp;
+  return await paraBlob(canvas, "image/jpeg", q);
+}
+
+export async function encolherImagem(file, lado = LADO_MAXIMO, q = QUALIDADE) {
+  try {
+    if (!file || !file.type.startsWith("image/")) return file;
+    if (file.type === "image/gif") return file;
+    const img = await lerImagem(file);
+    const l = img.width, a = img.height;
+    if (!l || !a) return file;
+    const escala = Math.min(1, lado / Math.max(l, a));
+    if (escala === 1 && file.size <= 400 * 1024) return file;
+    const nl = Math.max(1, Math.round(l * escala));
+    const na = Math.max(1, Math.round(a * escala));
+    const canvas = document.createElement("canvas");
+    canvas.width = nl; canvas.height = na;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, nl, na);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, nl, na);
+    if (img.close) img.close();
+    const blob = await melhorBlob(canvas, q);
+    if (!blob || blob.size >= file.size) return file;
+    const ext = blob.type === "image/webp" ? "webp" : "jpg";
+    return new File([blob], `foto.${ext}`, { type: blob.type });
+  } catch { return file; }
 }
 
 export async function uploadFile(file, pasta = "produtos") {
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const arquivo = await encolherImagem(file);
+  if (arquivo.size > TAMANHO_MAXIMO_MB * 1024 * 1024) {
+    throw new Error(`Arquivo muito grande (${(arquivo.size / 1024 / 1024).toFixed(1)} MB). O limite é ${TAMANHO_MAXIMO_MB} MB.`);
+  }
+  const ext = (arquivo.name.split(".").pop() || "jpg").toLowerCase();
   const nome = `${pasta}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("paixao").upload(nome, file, { cacheControl: "3600" });
+  const { error } = await supabase.storage.from(BUCKET)
+    .upload(nome, arquivo, { cacheControl: "3600", contentType: arquivo.type || undefined });
   if (error) erro(error);
-  const { data } = supabase.storage.from("paixao").getPublicUrl(nome);
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(nome);
   return data.publicUrl;
+}
+
+/* ------------------------------ Espaço usado ------------------------------ */
+export async function loadStorageUsage() {
+  const { data, error } = await supabase.rpc("get_storage_usage");
+  if (error || !data) return null;
+  return {
+    bytes: Number(data.bytes) || 0,
+    arquivos: Number(data.arquivos) || 0,
+    porPasta: (data.porPasta || []).map((p) => ({ pasta: p.pasta, bytes: Number(p.bytes) || 0, arquivos: Number(p.arquivos) || 0 })),
+  };
+}
+
+export async function loadOrphanFiles() {
+  const { data, error } = await supabase.rpc("get_orphan_files");
+  if (error || !data) return { arquivos: 0, bytes: 0, lista: [] };
+  return {
+    arquivos: Number(data.arquivos) || 0,
+    bytes: Number(data.bytes) || 0,
+    lista: (data.lista || []).map((f) => ({ caminho: f.caminho, bytes: Number(f.bytes) || 0 })),
+  };
+}
+
+export async function removeOrphanFiles(caminhos) {
+  const lista = (caminhos || []).filter(Boolean);
+  let apagados = 0;
+  for (let i = 0; i < lista.length; i += 80) {
+    const lote = lista.slice(i, i + 80);
+    const { error } = await supabase.storage.from(BUCKET).remove(lote);
+    if (error) { if (apagados === 0) erro(error); break; }
+    apagados += lote.length;
+  }
+  return apagados;
+}
+
+/* ---------------------------- Acessos ao catálogo -------------------------
+   Guarda só um código sorteado que fica no navegador de quem visita, para
+   saber se é a mesma pessoa voltando. Nada que identifique alguém.          */
+const CHAVE_VISITANTE = "px_visitante";
+
+export async function logCatalogVisit() {
+  try {
+    let id = localStorage.getItem(CHAVE_VISITANTE);
+    if (!id) {
+      id = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`);
+      localStorage.setItem(CHAVE_VISITANTE, id);
+    }
+    await supabase.rpc("log_catalog_visit", { p_visitor: id });
+  } catch { /* a contagem nunca pode atrapalhar quem está comprando */ }
+}
+
+export async function loadCatalogStats() {
+  const { data, error } = await supabase.rpc("get_catalog_stats");
+  if (error || !data) return null;
+  const n = (v) => Number(v) || 0;
+  return {
+    hojeAcessos: n(data.hojeAcessos), hojePessoas: n(data.hojePessoas),
+    seteAcessos: n(data.seteAcessos), setePessoas: n(data.setePessoas),
+    trintaAcessos: n(data.trintaAcessos), trintaPessoas: n(data.trintaPessoas),
+    totalAcessos: n(data.totalAcessos), totalPessoas: n(data.totalPessoas),
+    porDia: (data.porDia || []).map((d) => ({ dia: d.dia, acessos: n(d.acessos), pessoas: n(d.pessoas) })),
+  };
 }
 
 /* --------------------------------- Pedidos -------------------------------- */
