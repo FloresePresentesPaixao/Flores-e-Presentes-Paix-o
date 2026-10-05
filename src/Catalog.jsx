@@ -5,7 +5,7 @@ import * as api from "./api";
    FLORES E PRESENTES PAIXÃO — Catálogo público
    Navegação para o lado: um produto por vez, como folhear um álbum.
    =========================================================================== */
-
+ 
 const ARQUIVOS = "https://qojpijbimbwdxuwjvypf.supabase.co/storage/v1/object/public/paixao/";
 const LOGO = ARQUIVOS + "logo-circulo.jpg";   /* selo centralizado sobre o creme da marca */
 /* Fotos da abertura: ABERTURA01 a ABERTURA07 no bucket.
