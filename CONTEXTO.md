@@ -3,7 +3,7 @@
 > **Para o Claude:** este arquivo resume o projeto inteiro. Leia antes de propor mudanças.
 > Ao terminar cada alteração, atualize o "Histórico" e entregue este arquivo junto.
 >
-> Última atualização: 28/09/2026 (2ª rodada)
+> Última atualização: 07/10/2026
 
 ## O que é
 
@@ -43,7 +43,7 @@ React + Vite + `@supabase/supabase-js`, estilos inline, fontes Playfair Display 
 
 `index.html` (21) · `package.json` (16) · `vite.config.js` (4) · `wrangler.toml` (7) ·
 `public/manifest.json` (25) · `src/config.js` (6) · `src/main.jsx` (9) · `src/api.js` (365) ·
-`src/App.jsx` (2078) · `src/Catalog.jsx` (867)
+`src/App.jsx` (2292) · `src/Catalog.jsx` (867)
 
 `main.jsx`: se o endereço tem "catalogo", abre o Catálogo; senão, o App.
 
@@ -201,3 +201,4 @@ com o link direto do projeto certo.
 3.
 
 - **29/09/2026:** foto passou a encolher sozinha antes de subir, exclusão passou a liberar espaço de verdade, medidor do 1 GB com limpeza em Ajustes e aba nova **Acessos**. SQL: `paixao_espaco_acessos.sql`.
+- **07/10/2026:** correção em Ajustes no celular. (1) O teclado fechava a cada letra ao digitar categoria, ocasião ou etapa: o componente `Lista` estava declarado dentro de `Ajustes` e era recriado a cada tecla; virou a função `lista({...})`. **Não voltar a usar `<Lista />` nem declarar componente dentro de outro.** (2) A tela ficava cortada à direita: grades `1fr` não encolhiam abaixo do conteúdo; trocadas por `minmax(0,1fr)`, com `minWidth: 0` nos campos e `flexShrink: 0` nos botões. Vale para `.px-2col`, `.px-3col` e as grades de Produtos, Clientes, Promoções, Relatórios e Ajustes.
