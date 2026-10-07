@@ -132,9 +132,10 @@ input,select,textarea,button{font-family:inherit}
 .px-in{transition:border-color .16s ease,box-shadow .16s ease}
 .px-in:focus{outline:none;border-color:${T.vinho};box-shadow:0 0 0 3px rgba(142,27,46,.12)}
 .px-linha:hover{background:${T.bg2}}
-.px-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.px-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-@media(max-width:560px){.px-2col{grid-template-columns:1fr}.px-3col{grid-template-columns:1fr 1fr}}
+.px-2col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.px-3col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+.px-2col>*,.px-3col>*{min-width:0}
+@media(max-width:560px){.px-2col{grid-template-columns:minmax(0,1fr)}.px-3col{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 `;
 
 /* -------------------------------- UI base --------------------------------- */
@@ -585,7 +586,7 @@ function Hoje({ ctx }) {
         </h1>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,minmax(0,1fr))" : "repeat(2,minmax(0,1fr))", gap: 12, marginBottom: 20 }}>
         <Indicador rotulo="Entregas hoje" valor={deHoje.length} nota={atrasados.length ? `${atrasados.length} em atraso` : "tudo em dia"} icone="moto" cor={T.vinho} fundo={T.vinhoSoft} />
         <Indicador rotulo="Para amanhã" valor={deAmanha.length} nota="já programadas" icone="relogio" cor={T.rosa} fundo={T.rosaSoft} />
         <Indicador rotulo="Vendas do mês" valor={brl(mes.fat)} nota={`${mes.qtd} pedidos`} icone="dinheiro" cor={T.ok} fundo={T.okSoft} />
@@ -1250,7 +1251,7 @@ function Produtos({ ctx }) {
 
       {lista.length === 0 && <Cartao><Vazio>Nenhum produto encontrado.</Vazio></Cartao>}
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 10 }}>
         {lista.map((p) => (
           <Cartao key={p.id} onClick={() => setForm(p)} style={{ padding: 13, display: "flex", gap: 12, alignItems: "center", opacity: p.active ? 1 : 0.55 }}>
             <div style={{ width: 56, height: 56, borderRadius: 13, background: T.bg2, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center" }}>
@@ -1605,7 +1606,7 @@ function Promocoes({ ctx }) {
       <Titulo sub="Toque para alterar o valor ou encerrar">No ar agora</Titulo>
       {ativas.length === 0 && <Cartao><Vazio icone="promocoes">Nenhum produto em promoção.</Vazio></Cartao>}
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 10 }}>
         {ativas.map((p) => {
           const valida = temPromo(p);
           return (
@@ -1672,7 +1673,7 @@ function Clientes({ ctx }) {
 
       {lista.length === 0 && <Cartao><Vazio icone="clientes">Nenhum cliente encontrado.</Vazio></Cartao>}
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 10 }}>
         {lista.map((c) => {
           const r = resumo(c.id);
           return (
@@ -1851,14 +1852,14 @@ function Relatorios({ ctx }) {
         })}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,minmax(0,1fr))" : "repeat(2,minmax(0,1fr))", gap: 12, marginBottom: 24 }}>
         <Indicador rotulo="Faturamento" valor={brl(t.fat)} nota={`${t.n} pedidos`} icone="dinheiro" cor={T.ok} fundo={T.okSoft} />
         <Indicador rotulo="Ticket médio" valor={brl(t.ticket)} nota="por pedido" icone="pedidos" cor={T.vinho} fundo={T.vinhoSoft} />
         <Indicador rotulo="Entregas" valor={t.entregas} nota={`${brl(t.taxas)} em taxas`} icone="moto" cor={T.rosa} fundo={T.rosaSoft} />
         <Indicador rotulo="A receber" valor={brl(t.receber)} nota="todos os pedidos" icone="cartao" cor={T.warn} fundo={T.warnSoft} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 16 }}>
         <div>
           <Titulo sub="O que mais saiu no período">Mais vendidos</Titulo>
           <Cartao style={{ padding: 6 }}>
@@ -1965,7 +1966,7 @@ function Acessos({ ctx }) {
     <div>
       <Titulo sub="Quantas pessoas abriram o catálogo">Acessos</Titulo>
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,1fr)" : "repeat(2,1fr)", gap: 12, marginBottom: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "repeat(4,minmax(0,1fr))" : "repeat(2,minmax(0,1fr))", gap: 12, marginBottom: 20 }}>
         <Indicador rotulo="Hoje" valor={num(d.hojeAcessos)} nota={`${num(d.hojePessoas)} pessoa(s)`} icone="acessos" cor={T.vinho} fundo={T.vinhoSoft} />
         <Indicador rotulo="Últimos 7 dias" valor={num(d.seteAcessos)} nota={`${num(d.setePessoas)} pessoa(s)`} icone="acessos" cor={T.ok} fundo={T.okSoft} />
         <Indicador rotulo="Últimos 30 dias" valor={num(d.trintaAcessos)} nota={`${num(d.trintaPessoas)} pessoa(s)`} icone="acessos" cor={T.ink} fundo={T.bg2} />
@@ -2129,8 +2130,10 @@ function Ajustes({ ctx }) {
     URL.revokeObjectURL(url);
   };
 
-  const Lista = ({ titulo, dica, itens, valor, setValor, aoAdd, aoRemover, placeholder }) => (
-    <Cartao style={{ padding: 6, marginBottom: 16 }}>
+  /* Chamada como função (lista({...})), nunca como <Lista />: um componente criado dentro de
+     Ajustes ganha identidade nova a cada letra digitada, o campo é recriado e o teclado fecha. */
+  const lista = ({ titulo, dica, itens, valor, setValor, aoAdd, aoRemover, placeholder }) => (
+    <Cartao key={titulo} style={{ padding: 6, marginBottom: 16 }}>
       <div style={{ padding: "12px 14px 10px" }}>
         <div style={{ fontSize: 14.5, fontWeight: 600 }}>{titulo}</div>
         {dica && <div style={{ fontSize: 12.5, color: T.ink2, marginTop: 2 }}>{dica}</div>}
@@ -2149,8 +2152,8 @@ function Ajustes({ ctx }) {
       ))}
       {admin && (
         <div style={{ display: "flex", gap: 8, padding: 12, borderTop: `1px solid ${T.line}` }}>
-          <Entrada value={valor} onChange={(e) => setValor(e.target.value)} placeholder={placeholder} style={{ flex: 1, padding: "8px 11px" }} />
-          <Botao tipo="suave" tamanho="s" icone="mais" onClick={aoAdd} disabled={!valor.trim()}>Adicionar</Botao>
+          <Entrada value={valor} onChange={(e) => setValor(e.target.value)} placeholder={placeholder} style={{ flex: 1, minWidth: 0, padding: "8px 11px" }} />
+          <Botao tipo="suave" tamanho="s" icone="mais" onClick={aoAdd} disabled={!valor.trim()} style={{ flexShrink: 0 }}>Adicionar</Botao>
         </div>
       )}
     </Cartao>
@@ -2162,8 +2165,8 @@ function Ajustes({ ctx }) {
 
       {admin && <EspacoUsado avisar={avisar} />}
 
-      <div style={{ display: "grid", gridTemplateColumns: largo ? "1fr 1fr" : "1fr", gap: 16, alignItems: "start" }}>
-        <div>
+      <div style={{ display: "grid", gridTemplateColumns: largo ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 16, alignItems: "start" }}>
+        <div style={{ minWidth: 0 }}>
           <Cartao style={{ padding: 18, marginBottom: 16 }}>
             <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 14 }}>A loja</div>
             <Campo label="Nome"><Entrada value={cfg.storeName} onChange={(e) => setCfg({ ...cfg, storeName: e.target.value })} disabled={!admin} /></Campo>
@@ -2208,9 +2211,9 @@ function Ajustes({ ctx }) {
             ))}
             {admin && (
               <div style={{ display: "flex", gap: 8, padding: 12, borderTop: `1px solid ${T.line}` }}>
-                <Entrada value={zona.name} onChange={(e) => setZona({ ...zona, name: e.target.value })} placeholder="Bairro" style={{ flex: 1, padding: "8px 11px" }} />
-                <Entrada type="number" step="0.01" value={zona.fee} onChange={(e) => setZona({ ...zona, fee: e.target.value })} placeholder="Taxa" style={{ width: 100, padding: "8px 11px" }} />
-                <Botao tipo="suave" tamanho="s" icone="mais" disabled={!zona.name.trim()}
+                <Entrada value={zona.name} onChange={(e) => setZona({ ...zona, name: e.target.value })} placeholder="Bairro" style={{ flex: 1, minWidth: 0, padding: "8px 11px" }} />
+                <Entrada type="number" step="0.01" value={zona.fee} onChange={(e) => setZona({ ...zona, fee: e.target.value })} placeholder="Taxa" style={{ width: 84, flexShrink: 0, padding: "8px 11px" }} />
+                <Botao tipo="suave" tamanho="s" icone="mais" disabled={!zona.name.trim()} style={{ flexShrink: 0 }}
                   onClick={() => tenta(async () => { await api.saveZone(zona); setZona({ name: "", fee: "" }); }, "Bairro adicionado.")}>
                   Add
                 </Botao>
@@ -2238,18 +2241,18 @@ function Ajustes({ ctx }) {
           </Cartao>
         </div>
 
-        <div>
-          <Lista titulo="Categorias" dica="Os tipos de produto." itens={meta.categories} valor={novaCat} setValor={setNovaCat} placeholder="Ex.: Vasos"
-            aoAdd={() => tenta(async () => { await api.addCategory(novaCat.trim()); setNovaCat(""); }, "Categoria criada.")}
-            aoRemover={(id) => tenta(() => api.removeCategory(id), "Categoria removida.")} />
+        <div style={{ minWidth: 0 }}>
+          {lista({ titulo: "Categorias", dica: "Os tipos de produto.", itens: meta.categories, valor: novaCat, setValor: setNovaCat, placeholder: "Ex.: Vasos",
+            aoAdd: () => tenta(async () => { await api.addCategory(novaCat.trim()); setNovaCat(""); }, "Categoria criada."),
+            aoRemover: (id) => tenta(() => api.removeCategory(id), "Categoria removida.") })}
 
-          <Lista titulo="Ocasiões" dica="Como o cliente encontra o produto no catálogo." itens={meta.occasions} valor={novaOca} setValor={setNovaOca} placeholder="Ex.: Formatura"
-            aoAdd={() => tenta(async () => { await api.addOccasion(novaOca.trim()); setNovaOca(""); }, "Ocasião criada.")}
-            aoRemover={(id) => tenta(() => api.removeOccasion(id), "Ocasião removida.")} />
+          {lista({ titulo: "Ocasiões", dica: "Como o cliente encontra o produto no catálogo.", itens: meta.occasions, valor: novaOca, setValor: setNovaOca, placeholder: "Ex.: Formatura",
+            aoAdd: () => tenta(async () => { await api.addOccasion(novaOca.trim()); setNovaOca(""); }, "Ocasião criada."),
+            aoRemover: (id) => tenta(() => api.removeOccasion(id), "Ocasião removida.") })}
 
-          <Lista titulo="Etapas do pedido" dica="Do recebimento até a entrega." itens={meta.statuses} valor={novaEtapa} setValor={setNovaEtapa} placeholder="Ex.: Aguardando flor"
-            aoAdd={() => tenta(async () => { await api.addStatus(novaEtapa.trim()); setNovaEtapa(""); }, "Etapa criada.")}
-            aoRemover={(id) => tenta(() => api.removeStatus(id), "Etapa removida.")} />
+          {lista({ titulo: "Etapas do pedido", dica: "Do recebimento até a entrega.", itens: meta.statuses, valor: novaEtapa, setValor: setNovaEtapa, placeholder: "Ex.: Aguardando flor",
+            aoAdd: () => tenta(async () => { await api.addStatus(novaEtapa.trim()); setNovaEtapa(""); }, "Etapa criada."),
+            aoRemover: (id) => tenta(() => api.removeStatus(id), "Etapa removida.") })}
 
           {admin && (
             <Cartao style={{ padding: 6 }}>
